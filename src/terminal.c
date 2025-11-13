@@ -22,3 +22,22 @@ void term_send(unsigned char byte)
 
     UDR1 = byte;
 }
+
+
+void term_print(char* str)
+{
+    for (; *str; str++)
+        term_send(*str);
+}
+
+void kprint(char* str)
+{
+    term_print("[KERNEL] ");
+    term_print(str);
+}
+
+void kdebug(char* str)
+{
+    term_print("[DEBUG] ");
+    term_print(str);
+}

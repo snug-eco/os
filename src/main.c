@@ -11,13 +11,8 @@
 int main(void)
 {
     term_init(BAUD_SCALAR);
+    kprint("terminal uart connection initialized.\n");
 
-    char* ptr = "hello world\n";
-
-    for (; *ptr; ptr++)
-    {
-        term_send(*ptr);
-    }
 
     return 0;
 }
