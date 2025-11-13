@@ -1,8 +1,9 @@
 
-
 upload: compile
 	avrdude -P /dev/ttyACM0 -c stk500v2 -p m1284p -v -U flash:w:build/main.hex
 
+size: compile
+	avr-size -C -x --mcu=atmega1284p build/main.elf
 
 compile:
 	-mkdir build
