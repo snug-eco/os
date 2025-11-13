@@ -3,14 +3,20 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+#include "terminal.c"
+
+#define BAUD 300
+#define BAUD_SCALAR (F_CPU / (16 * BAUD))
 
 int main(void)
 {
-    DDRA |= (1 << DDA0);
-    while (1)
+    term_init(BAUD_SCALAR);
+
+    char* ptr = "hello world\n";
+
+    for (; *ptr; ptr++)
     {
-        PORTA ^= (1 << DDA0);
-        _delay_ms(2000);
+        term_send(*ptr);
     }
 
     return 0;
