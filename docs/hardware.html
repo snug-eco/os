@@ -1,0 +1,26 @@
+
+<html>
+    <head>
+        <title>Hardware</title>
+    </head>
+    <body>
+        <h1>Outline</h1>
+        <pre>
+The system is comprised of three main components, hardware wise:
+- The ATmega1284P-PU which acts as the processor.
+- A SD-Card over SPI, which acts as the mass storage device.
+- A UART-to-USB convert which acts as the terminal interface.
+        </pre>
+
+        <h1>UART Terminal</h1>
+        <pre>
+            The uart terminal is connect over on-board uart controller 1.
+            Ergo, port D, RX on PD2 and TX on PD3.
+        </pre>
+
+        <h1>SD mass storage</h1>
+        <pre>
+            The SD card is connect over on-board uart controller 2 in MSPIM.
+            PB0 is SCK, PB1 is CS (SS), PD0 is MISO, PD1 is MOSI.
+        </pre>
+    </body>
