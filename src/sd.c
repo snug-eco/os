@@ -1,0 +1,175 @@
+// this driver expects a high capacity sd card,
+// one with block addressing.
+
+// this file is heavily commented
+// because the spi driver is pretty opaque.
+
+#include <avr/io.h>
+#include <util/delay.h>
+
+#include <stdint.h>
+#include <stdbool.h>
+
+
+
+//remember: active low
+#define SD_CS_ON()  (PORTB &= ~(1 << PB0))
+#define SD_CS_OFF() (PORTB |=  (1 << PB0))
+
+//commands
+#define SD_CMD0   0x40
+#define SD_CMD8   0x48
+#define SD_CMD17  0x51
+#define SD_CMD24  0x58
+#define SD_CMD55  0x77
+#define SD_ACMD41 0x69
+#define SD_CMD58  0x7A
+
+void sd_spi_init(void)
+{
+    _delay_ms(300);
+    //set io modes
+    DDRB |=  (1 << PB5); //MOSI
+    DDRB |=  (1 << PB7); //SCK
+    DDRB |=  (1 << PB0); //CS
+    DDRB |=  (1 << PB4); //SS (not used, must still be set)
+    DDRB &= ~(1 << PB6); // MISO
+    
+    // enable spi master mode, set clock rate f_osc/16
+    // at f_osc = 1MHz, f_osc / 16 < 400kHz, such that sd card an initialize
+    SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0) | (1 << SPR1);
+    SPCR &= ~(1 << SPI2X); //clear double speed
+    SD_CS_OFF();
+
+}
+
+uint8_t sd_spi_transfer(uint8_t data)
+{
+    //kdebug("sd_spi_transfer");
+    //khex(data);
+    SPDR = data; //transmit
+    while (!(SPSR & (1 << SPIF))); //wait for receive
+    return SPDR;
+}
+
+uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
+{
+    sd_spi_transfer(cmd);
+    sd_spi_transfer((arg >> 24) & 0xFF);
+    sd_spi_transfer((arg >> 16) & 0xFF);
+    sd_spi_transfer((arg >>  8) & 0xFF);
+    sd_spi_transfer((arg >>  0) & 0xFF);
+
+    //precomputed crc
+    switch (cmd)
+    {
+        case SD_CMD0: sd_spi_transfer(0x95); break;
+        case SD_CMD8: sd_spi_transfer(0x87); break;
+        default:      sd_spi_transfer(0xFF); break;
+    }
+
+    //await response
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        uint8_t resp = sd_spi_transfer(0xFF);
+        if (!(resp & 0x80)) return resp;
+    }
+
+    kdebug("sd_cmd: transmission time out\n");
+    return 0xFF; //timeout
+}
+
+bool sd_init(void) 
+{
+    kdebug("sd_init\n");
+    sd_spi_init();
+    SD_CS_OFF();
+
+    //send 74+ spi clock cycles to allow sd card to initialize.
+    for (int i = 0; i < 10; i++) sd_spi_transfer(0xFF);
+
+    SD_CS_ON(); //start transaction
+    sd_spi_transfer(0xFF);
+
+
+    uint8_t resp;
+    for (int i = 0; i < 1000; i++)
+    {
+        resp = sd_cmd(SD_CMD0, 0); //set sd to spi mode.
+        khex(resp);
+        if (resp == 1) break; //init success
+    }
+    if (resp != 1) return false; //unable to initialize.
+    
+    kdebug("sd_init: set spi mode\n");
+
+    _delay_ms(1);
+    resp = sd_cmd(SD_CMD8, 0x1AA); //voltage check.
+    if (resp != 1) return false; //unsupported card.
+    
+    kdebug("sd_init: voltage checked\n");
+    
+    //wait for card to be ready
+    while (sd_cmd(SD_CMD55, 0) <= 1)
+        sd_cmd(SD_ACMD41, 0x40000000);
+
+    resp = sd_cmd(SD_CMD58, 0); //read ocr.
+    if (resp != 0) return false; //comm error.
+    
+    kdebug("sd_init: ocr read\n");
+    
+    bool high_cap = (sd_spi_transfer(0xFF) & 0x40) != 0;
+    sd_spi_transfer(0xFF); //don't care
+    sd_spi_transfer(0xFF); //don't care
+    sd_spi_transfer(0xFF); //don't care
+
+    if (!high_cap) return false; //only high capacity cards.
+
+    kdebug("sd_init: card good\n");
+    
+    SD_CS_OFF(); //transaction complete
+    sd_spi_transfer(0xFF);
+    return true;
+}
+
+void sd_read_block(uint32_t block, uint8_t* buffer)
+{
+    SD_CS_ON();
+    sd_cmd(SD_CMD17, block);
+
+    //catch data token
+    while (sd_spi_transfer(0xFF) != 0xFE); 
+
+    for (uint16_t i = 0; i < 512; i++)
+        buffer[i] = sd_spi_transfer(0xFF);
+
+    sd_spi_transfer(0xFF); //dummy crc
+    sd_spi_transfer(0xFF); //stream terminate
+    SD_CS_OFF();
+}
+
+void sd_write_block(uint32_t block, uint8_t* buffer)
+{
+    SD_CS_ON();
+    sd_cmd(SD_CMD24, block);
+
+    //throw data token
+    sd_spi_transfer(0xFE);
+
+    for (uint16_t i = 0; i < 512; i++)
+        sd_spi_transfer(buffer[i]);
+
+    sd_spi_transfer(0xFF); //dummy crc
+    sd_spi_transfer(0xFF); //stream terminate
+    
+    uint8_t resp = sd_spi_transfer(0xFF);
+    bool accepted = ((resp & 0x1F) != 0x05);
+
+    //wait till not busy
+    while (sd_spi_transfer(0xFF) == 0);
+
+}
+
+
+
+

@@ -1,6 +1,9 @@
 
 //terminal io for uart 1
 
+#include <avr/io.h>
+#include <util/delay.h>
+
 void term_init(unsigned int baud)
 {
     //set baud rate
@@ -23,6 +26,13 @@ void term_send(unsigned char byte)
     UDR1 = byte;
 }
 
+void term_clear()
+{
+    for (int i = 0; i < 30; i++)
+        term_send('\n');
+
+}
+
 
 void term_print(char* str)
 {
@@ -38,6 +48,25 @@ void kprint(char* str)
 
 void kdebug(char* str)
 {
-    term_print("[DEBUG] ");
+    #ifdef KDEBUG
+        term_print("[DEBUG] ");
+        term_print(str);
+    #endif
+}
+
+void khex(uint8_t byte)
+{
+    term_print("[HEX] 0x");
+    static char digit[16] = "0123456789ABCDEF";
+    term_send(digit[(byte >> 4) & 0xF]);
+    term_send(digit[(byte >> 0) & 0xF]);
+    term_send('\n');
+}
+
+void kpanic(char* str)
+{
+    term_print("[PANIC] ");
     term_print(str);
+
+    while (1) _delay_ms(1000);
 }
