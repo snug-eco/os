@@ -25,8 +25,8 @@
 #define SD_ACMD41 0x29
 #define SD_CMD58  0x3A
 
-#define sd_panic(msg) kpanic("[SD-Card subsystem] " msg "\n\tTry power cycling the SD-Card and device.\n")
-#define sd_print(msg) kprint("[SD-Card subsystem] " msg "\n")
+#define sd_panic(msg) kpanic("[SD] " msg "\n\tTry power cycling the SD-Card and device.\n")
+#define sd_print(msg) kprint("[SD] " msg "\n")
 
 void sd_spi_init(void)
 {
@@ -154,46 +154,66 @@ void sd_init(void)
 }
 
 
-/*
+
 
 void sd_read_block(uint32_t block, uint8_t* buffer)
 {
-    SD_CS_ON();
     sd_cmd(SD_CMD17, block);
 
+    kdebug("CMD17 sent.\n");
+
     //catch data token
-    while (sd_spi_transfer(0xFF) != 0xFE); 
+    while (sd_spi_recv() != 0xFE); 
 
     for (uint16_t i = 0; i < 512; i++)
-        buffer[i] = sd_spi_transfer(0xFF);
+        buffer[i] = sd_spi_recv();
 
-    sd_spi_transfer(0xFF); //dummy crc
-    sd_spi_transfer(0xFF); //stream terminate
-    SD_CS_OFF();
+    sd_spi_recv(); //dummy crc
 }
 
 void sd_write_block(uint32_t block, uint8_t* buffer)
 {
-    SD_CS_ON();
     sd_cmd(SD_CMD24, block);
 
     //throw data token
-    sd_spi_transfer(0xFE);
+    sd_spi_send(0xFE);
 
     for (uint16_t i = 0; i < 512; i++)
-        sd_spi_transfer(buffer[i]);
+        sd_spi_send(buffer[i]);
 
-    sd_spi_transfer(0xFF); //dummy crc
-    sd_spi_transfer(0xFF); //stream terminate
+    sd_spi_send(0xFF); //dummy crc
+    sd_spi_send(0xFF); //dummy crc
     
-    uint8_t resp = sd_spi_transfer(0xFF);
-    bool accepted = ((resp & 0x1F) != 0x05);
+    uint8_t resp = sd_spi_recv(0xFF);
+    bool accepted = (resp & 0x1F) == 0x05;
+    if (!accepted) sd_panic("Block write error.");
 
-    //wait till not busy
-    while (sd_spi_transfer(0xFF) == 0);
+}
 
+//generic read/write cache
+static uint8_t  sd_block_cache[512];
+static uint32_t sd_block_cache_index = -1;
+
+uint8_t sd_read(uint32_t req_address)
+{
+    uint32_t req_block_index  = req_address >> 9;
+    uint16_t req_block_offset = req_address & (512 - 1);
+
+    //block invalidate
+    if (req_block_index != sd_block_cache_index)
+        sd_read_block(req_block_index, sd_block_cache);
+
+    sd_block_cache_index = req_block_index;
+
+    return sd_block_cache[req_block_offset];
+}
+
+void sd_write(uint32_t req_address, uint8_t value)
+{
+    
 }
 
 
 
-*/
+
+
