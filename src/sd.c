@@ -17,13 +17,13 @@
 #define SD_CS_OFF() (PORTB |=  (1 << PB0))
 
 //commands
-#define SD_CMD0   0x40
-#define SD_CMD8   0x48
-#define SD_CMD17  0x51
-#define SD_CMD24  0x58
-#define SD_CMD55  0x77
-#define SD_ACMD41 0x69
-#define SD_CMD58  0x7A
+#define SD_CMD0   0x0
+#define SD_CMD8   0x8
+#define SD_CMD17  0x11
+#define SD_CMD24  0x18
+#define SD_CMD55  0x37
+#define SD_ACMD41 0x29
+#define SD_CMD58  0x3A
 
 void sd_spi_init(void)
 {
@@ -55,24 +55,8 @@ uint8_t sd_spi_recv()
     sd_spi_send(0xFF);
     uint8_t data = SPDR;
 
-    if (data != 0xFF)
-    {
-        kdebug("sd_spi_recv ");
-        khex(SPDR);
-    }
     return data;
 }
-
-void sd_wait_not_busy()
-{
-    kdebug("sd_wait_not_busy: start\n");
-    int i = 0;
-    while (sd_spi_recv() != 0xFF && (i++) < 300);
-
-
-    kdebug("sd_wait_not_busy: end\n");
-}
-
 
 
 uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
@@ -94,7 +78,7 @@ uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
 
     //await response
     uint8_t resp;
-    for (uint8_t i = 0; i < 0xFFFF; i++)
+    for (uint16_t i = 0; i < 0xFFF; i++)
     {
         resp = sd_spi_recv();
         if (!(resp & 0x80)) goto done;
@@ -119,12 +103,10 @@ bool sd_init(void)
 
     SD_CS_ON(); //start transaction
 
-
     uint8_t resp;
     for (int i = 0; i < 1000; i++)
     {
         resp = sd_cmd(SD_CMD0, 0); //set sd to spi mode.
-        khex(resp);
         if (resp == 1) break; //init success
     }
     if (resp != 1) return false; //unable to initialize.
