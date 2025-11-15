@@ -12,9 +12,6 @@
 
 
 
-//remember: active low
-#define SD_CS_ON()  (PORTB &= ~(1 << PB0))
-#define SD_CS_OFF() (PORTB |=  (1 << PB0))
 
 //commands
 #define SD_CMD0   0x0
@@ -27,6 +24,38 @@
 
 #define sd_panic(msg) kpanic("[SD] " msg "\n\tTry power cycling the SD-Card and device.\n")
 #define sd_print(msg) kprint("[SD] " msg "\n")
+
+
+void sd_spi_send(uint8_t data)
+{
+    SPDR = data;
+    while (!(SPSR & (1 << SPIF)));
+}
+
+uint8_t sd_spi_recv()
+{
+    sd_spi_send(0xFF);
+    uint8_t data = SPDR;
+
+    return data;
+}
+
+
+//remember: active low
+void SD_CS_ON()
+{
+    PORTB &= ~(1 << PB0);
+    sd_spi_send(0xFF);
+}
+void SD_CS_OFF()
+{
+    PORTB |=  (1 << PB0);
+    sd_spi_send(0xFF);
+}
+
+
+
+
 
 void sd_spi_init(void)
 {
@@ -47,23 +76,10 @@ void sd_spi_init(void)
 }
 
 
-void sd_spi_send(uint8_t data)
-{
-    SPDR = data;
-    while (!(SPSR & (1 << SPIF)));
-}
-
-uint8_t sd_spi_recv()
-{
-    sd_spi_send(0xFF);
-    uint8_t data = SPDR;
-
-    return data;
-}
-
 
 uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
 {
+    //make sure card is selected
     SD_CS_ON();
 
     sd_spi_send(cmd | 0x40);
@@ -90,7 +106,6 @@ uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
     sd_print("Command transmission time-out.");
 
 done:
-    SD_CS_OFF();
     sd_spi_send(0xFF);
     return resp;
 }
@@ -112,7 +127,7 @@ void sd_init(void)
     //send 74+ spi clock cycles to allow sd card to initialize.
     for (int i = 0; i < 10; i++) sd_spi_send(0xFF);
 
-    SD_CS_ON(); //start transaction
+    SD_CS_ON();
 
     //set spi mode
     uint8_t resp;
@@ -149,8 +164,7 @@ void sd_init(void)
     if (!high_cap) sd_panic("Card is not SDHC or SDHX, Card is unsupported."); //only high capacity cards.
 
     sd_print("Card initialized.");
-    
-    SD_CS_OFF(); //transaction complete
+    SD_CS_OFF(); 
 }
 
 
@@ -160,14 +174,13 @@ void sd_read_block(uint32_t block, uint8_t* buffer)
 {
     sd_cmd(SD_CMD17, block);
 
-    kdebug("CMD17 sent.\n");
-
     //catch data token
     while (sd_spi_recv() != 0xFE); 
 
     for (uint16_t i = 0; i < 512; i++)
         buffer[i] = sd_spi_recv();
 
+    sd_spi_recv(); //dummy crc
     sd_spi_recv(); //dummy crc
 }
 
@@ -188,6 +201,8 @@ void sd_write_block(uint32_t block, uint8_t* buffer)
     bool accepted = (resp & 0x1F) == 0x05;
     if (!accepted) sd_panic("Block write error.");
 
+    //wait for flash to complete
+    while (sd_spi_recv() == 0);
 }
 
 //generic read/write cache
