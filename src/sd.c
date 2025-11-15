@@ -25,6 +25,9 @@
 #define SD_ACMD41 0x29
 #define SD_CMD58  0x3A
 
+#define sd_panic(msg) kpanic("[SD-Card subsystem] " msg "\n\tTry power cycling the SD-Card and device.\n")
+#define sd_print(msg) kprint("[SD-Card subsystem] " msg "\n")
+
 void sd_spi_init(void)
 {
     //set io modes
@@ -84,7 +87,7 @@ uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
         if (!(resp & 0x80)) goto done;
     }
 
-    kdebug("sd_cmd: transmission time out\n");
+    sd_print("Command transmission time-out.");
 
 done:
     SD_CS_OFF();
@@ -99,12 +102,10 @@ uint8_t sd_acmd(uint8_t cmd, uint32_t arg)
 }
 
 
-#define sd_panic(msg) kpanic("[SD-Card subsystem] " msg "\n\tTry power cycling the SD-Card and device.\n")
-#define sd_print(msg) kprint("[SD-Card subsystem] " msg "\n")
 
 void sd_init(void) 
 {
-    kdebug("sd_init\n");
+    sd_print("Initializing... ");
     sd_spi_init();
     SD_CS_OFF();
 
@@ -129,21 +130,16 @@ void sd_init(void)
     
     
     //wait for card to be ready
-    kdebug("sd_init: waiting for ready state... ");
     for (int i = 0; i < 100; i++)
     {
         resp = sd_acmd(SD_ACMD41, 0x40000000);
-        khex(resp);
         if (resp == 0) break; //ready success
     }
     if (resp != 0) sd_panic("Timeout, Card cannot be brought into ready state.");
-    kdebug("good\n");
 
 
     resp = sd_cmd(SD_CMD58, 0); //read ocr.
     if (resp != 0) sd_panic("OCR read error.");
-    
-    kdebug("sd_init: ocr read\n");
     
     bool high_cap = (sd_spi_recv() & 0x40) != 0;
     sd_spi_recv(); //don't care
