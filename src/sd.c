@@ -92,7 +92,17 @@ done:
     return resp;
 }
 
-bool sd_init(void) 
+uint8_t sd_acmd(uint8_t cmd, uint32_t arg)
+{
+    sd_cmd(SD_CMD55, 0);
+    return sd_cmd(cmd, arg);
+}
+
+
+#define sd_panic(msg) kpanic("[SD-Card subsystem] " msg "\n\tTry power cycling the SD-Card and device.\n")
+#define sd_print(msg) kprint("[SD-Card subsystem] " msg "\n")
+
+void sd_init(void) 
 {
     kdebug("sd_init\n");
     sd_spi_init();
@@ -103,27 +113,35 @@ bool sd_init(void)
 
     SD_CS_ON(); //start transaction
 
+    //set spi mode
     uint8_t resp;
     for (int i = 0; i < 1000; i++)
     {
-        resp = sd_cmd(SD_CMD0, 0); //set sd to spi mode.
+        resp = sd_cmd(SD_CMD0, 0); //set sd to spi mode
         if (resp == 1) break; //init success
     }
-    if (resp != 1) return false; //unable to initialize.
+    if (resp != 1) sd_panic("Unable to put Card into SPI mode.");
     
-    kdebug("sd_init: set spi mode\n");
 
-    resp = sd_cmd(SD_CMD8, 0x1AA); //voltage check.
-    if (resp != 1) return false; //unsupported card.
+    //voltage and version check
+    resp = sd_cmd(SD_CMD8, 0x1AA);
+    if (resp != 1) sd_panic("Unsupported Card.");
     
-    kdebug("sd_init: voltage checked\n");
     
     //wait for card to be ready
-    while (sd_cmd(SD_CMD55, 0) <= 1)
-        sd_cmd(SD_ACMD41, 0x40000000);
+    kdebug("sd_init: waiting for ready state... ");
+    for (int i = 0; i < 100; i++)
+    {
+        resp = sd_acmd(SD_ACMD41, 0x40000000);
+        khex(resp);
+        if (resp == 0) break; //ready success
+    }
+    if (resp != 0) sd_panic("Timeout, Card cannot be brought into ready state.");
+    kdebug("good\n");
+
 
     resp = sd_cmd(SD_CMD58, 0); //read ocr.
-    if (resp != 0) return false; //comm error.
+    if (resp != 0) sd_panic("OCR read error.");
     
     kdebug("sd_init: ocr read\n");
     
@@ -132,12 +150,11 @@ bool sd_init(void)
     sd_spi_recv(); //don't care
     sd_spi_recv(); //don't care
 
-    if (!high_cap) return false; //only high capacity cards.
+    if (!high_cap) sd_panic("Card is not SDHC or SDHX, Card is unsupported."); //only high capacity cards.
 
-    kdebug("sd_init: card good\n");
+    sd_print("Card initialized.");
     
     SD_CS_OFF(); //transaction complete
-    return true;
 }
 
 

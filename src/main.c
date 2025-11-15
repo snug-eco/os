@@ -17,9 +17,9 @@ int main(void)
 {
     term_init(BAUD_SCALAR);
     term_clear();
-    kprint("terminal uart connection initialized.\n");
+    kprint("Terminal UART connection initialized.\n");
 
-    if (!sd_init()) kpanic("unable to init sd card.\n");
+    sd_init();
     kprint("sd card initialized.\n");
 
 
