@@ -27,7 +27,6 @@
 
 void sd_spi_init(void)
 {
-    _delay_ms(300);
     //set io modes
     DDRB |=  (1 << PB5); //MOSI
     DDRB |=  (1 << PB7); //SCK
@@ -35,48 +34,78 @@ void sd_spi_init(void)
     DDRB |=  (1 << PB4); //SS (not used, must still be set)
     DDRB &= ~(1 << PB6); // MISO
     
+    PORTB |= (1 << PB4);
+    
     // enable spi master mode, set clock rate f_osc/16
     // at f_osc = 1MHz, f_osc / 16 < 400kHz, such that sd card an initialize
     SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0) | (1 << SPR1);
     SPCR &= ~(1 << SPI2X); //clear double speed
     SD_CS_OFF();
-
 }
 
-uint8_t sd_spi_transfer(uint8_t data)
+
+void sd_spi_send(uint8_t data)
 {
-    //kdebug("sd_spi_transfer");
-    //khex(data);
-    SPDR = data; //transmit
-    while (!(SPSR & (1 << SPIF))); //wait for receive
-    return SPDR;
+    SPDR = data;
+    while (!(SPSR & (1 << SPIF)));
 }
+
+uint8_t sd_spi_recv()
+{
+    sd_spi_send(0xFF);
+    uint8_t data = SPDR;
+
+    if (data != 0xFF)
+    {
+        kdebug("sd_spi_recv ");
+        khex(SPDR);
+    }
+    return data;
+}
+
+void sd_wait_not_busy()
+{
+    kdebug("sd_wait_not_busy: start\n");
+    int i = 0;
+    while (sd_spi_recv() != 0xFF && (i++) < 300);
+
+
+    kdebug("sd_wait_not_busy: end\n");
+}
+
+
 
 uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
 {
-    sd_spi_transfer(cmd);
-    sd_spi_transfer((arg >> 24) & 0xFF);
-    sd_spi_transfer((arg >> 16) & 0xFF);
-    sd_spi_transfer((arg >>  8) & 0xFF);
-    sd_spi_transfer((arg >>  0) & 0xFF);
+    SD_CS_ON();
 
-    //precomputed crc
-    switch (cmd)
-    {
-        case SD_CMD0: sd_spi_transfer(0x95); break;
-        case SD_CMD8: sd_spi_transfer(0x87); break;
-        default:      sd_spi_transfer(0xFF); break;
-    }
+    sd_spi_send(cmd | 0x40);
+    sd_spi_send((arg >> 24) & 0xFF);
+    sd_spi_send((arg >> 16) & 0xFF);
+    sd_spi_send((arg >>  8) & 0xFF);
+    sd_spi_send((arg >>  0) & 0xFF);
+
+    //crc
+    uint8_t crc = 0xFF;
+    if (cmd == SD_CMD0) crc = 0x95;
+    if (cmd == SD_CMD8) crc = 0x87;
+    sd_spi_send(crc);
+
 
     //await response
-    for (uint8_t i = 0; i < 8; i++)
+    uint8_t resp;
+    for (uint8_t i = 0; i < 0xFFFF; i++)
     {
-        uint8_t resp = sd_spi_transfer(0xFF);
-        if (!(resp & 0x80)) return resp;
+        resp = sd_spi_recv();
+        if (!(resp & 0x80)) goto done;
     }
 
     kdebug("sd_cmd: transmission time out\n");
-    return 0xFF; //timeout
+
+done:
+    SD_CS_OFF();
+    sd_spi_send(0xFF);
+    return resp;
 }
 
 bool sd_init(void) 
@@ -86,10 +115,9 @@ bool sd_init(void)
     SD_CS_OFF();
 
     //send 74+ spi clock cycles to allow sd card to initialize.
-    for (int i = 0; i < 10; i++) sd_spi_transfer(0xFF);
+    for (int i = 0; i < 10; i++) sd_spi_send(0xFF);
 
     SD_CS_ON(); //start transaction
-    sd_spi_transfer(0xFF);
 
 
     uint8_t resp;
@@ -103,7 +131,6 @@ bool sd_init(void)
     
     kdebug("sd_init: set spi mode\n");
 
-    _delay_ms(1);
     resp = sd_cmd(SD_CMD8, 0x1AA); //voltage check.
     if (resp != 1) return false; //unsupported card.
     
@@ -118,19 +145,21 @@ bool sd_init(void)
     
     kdebug("sd_init: ocr read\n");
     
-    bool high_cap = (sd_spi_transfer(0xFF) & 0x40) != 0;
-    sd_spi_transfer(0xFF); //don't care
-    sd_spi_transfer(0xFF); //don't care
-    sd_spi_transfer(0xFF); //don't care
+    bool high_cap = (sd_spi_recv() & 0x40) != 0;
+    sd_spi_recv(); //don't care
+    sd_spi_recv(); //don't care
+    sd_spi_recv(); //don't care
 
     if (!high_cap) return false; //only high capacity cards.
 
     kdebug("sd_init: card good\n");
     
     SD_CS_OFF(); //transaction complete
-    sd_spi_transfer(0xFF);
     return true;
 }
+
+
+/*
 
 void sd_read_block(uint32_t block, uint8_t* buffer)
 {
@@ -172,4 +201,4 @@ void sd_write_block(uint32_t block, uint8_t* buffer)
 
 
 
-
+*/
