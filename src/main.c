@@ -27,19 +27,28 @@ int main(void)
     //sd card
     sd_init();
 
-    sd_write_block(0, test_block1);
+
+    kdebug("write start\n");
+    for (int i = 0; i < 10000; i++)
+    {
+        sd_write(i, i*2);
+    }
+    kdebug("write done\n");
 
     kdebug("read start\n");
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 10000; i++)
     {
-        sd_read_block (0, test_block2);
-        term_print(".");
+        uint8_t data = sd_read(i);
+        if (data != (uint8_t)(i*2))
+        {
+            kdebug("verify mismatch");
+            khex(data);
+            khex((uint8_t)(i*2));
+        }
     }
     kdebug("read done\n");
 
-    for (int i = 0; i < 10; i++)
-        khex(test_block2[i]);
-
+    
 
 
 
