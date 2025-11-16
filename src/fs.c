@@ -19,7 +19,7 @@ enum fs_flag_fields
 };
 
 
-struct fs_header
+struct fs_header_s
 {
     uint8_t   flag; //header meta data
     char      name[255]; //ascii encoded name
@@ -27,18 +27,48 @@ struct fs_header
     uint32_t  size; //size of file content
 } __attribute__((packed));
 
-typedef struct fs_header* fs_file_t;
+
+typedef sd_addr_t fs_file_t;
 
 
-uint32_t* fs_open(fs_file_t f)
+static struct fs_header_s fs_header;
+static sd_addr_t _fs_cache_address = -1;
+
+void fs_read_header(fs_file_t f)
 {
-    return (uint32_t*)(f + sizeof(struct fs_header));
+    if (f != _fs_cache_address)
+        sd_read(
+            f, 
+            (uint8_t*)&fs_header, 
+            sizeof(struct fs_header_s)
+        );
+    _fs_cache_address = f;
+}
+
+void fs_write_header(fs_file_t f)
+{
+    sd_write(
+        f, 
+        (uint8_t*)&fs_header, 
+        sizeof(struct fs_header_s)
+    );
+}
+
+
+
+
+
+
+sd_addr_t fs_open(fs_file_t f)
+{
+    return (sd_addr_t)(f + sizeof(struct fs_header_s));
 }
 
 
 bool fs_check_valid(fs_file_t f)
 {
-    uint8_t flag = f->flag;
+    fs_read_header(f);
+    uint8_t flag = fs_header.flag;
     if ((flag >> FS_FLAG_MUST_ONE     ) & 1 != 1) return false;
     if ((flag >> FS_FLAG_MUST_ZERO    ) & 1 != 0) return false;
     if ((flag >> FS_FLAG_VALID_HEADER ) & 1 != 1) return false;
@@ -51,7 +81,9 @@ bool fs_check_valid(fs_file_t f)
 //ignores active state.
 fs_file_t fs_next(fs_file_t f)
 {
-    return f->size + sizeof(struct fs_header_t);
+    fs_read_header(f);
+    return (fs_file_t)
+        (fs_header.size + sizeof(struct fs_header_s));
 }
 
 
@@ -61,7 +93,7 @@ uint32_t fs_hash_dj2(unsigned char* name)
     uint32_t hash = 5381;
     char c;
 
-    while (c = *str++)
+    while (c = *name++)
         hash = ((hash << 5) + hash) + c; // hash * 33 + c
     
     return hash;
@@ -77,10 +109,10 @@ fs_file_t fs_seek(char* name)
     
     while (fs_check_valid(doggie))
     {
-        if (doggie->hash != name_hash)  goto next;
-        if (strcmp(doggie->name, name)) goto next;
+        //fs_read_header(doggie);
+        if (fs_header.hash != name_hash)  goto next;
+        if (strcmp(fs_header.name, name)) goto next;
 
-        //file good
         return doggie;
 
     next:
@@ -88,12 +120,12 @@ fs_file_t fs_seek(char* name)
     }
 
     //over-run
-    return NULL;
+    return 0;
 }
 
 bool fs_exists(char* name)
 {
-    return (fs_seek(name) != NULL);
+    return (fs_seek(name) != 0);
 }
 
 fs_file_t fs_final()
@@ -112,25 +144,31 @@ fs_file_t fs_final()
 fs_file_t fs_create(char* name, uint32_t size)
 {
     fs_file_t f = fs_final();
+    fs_read_header(f);
 
-    f->flag = 0;
-    f->flag |= (1 << FS_FLAG_MUST_ONE); //duh
-    f->flag |= (1 << FS_FLAG_VALID_HEADER); //quoque duh
-    f->flag |= (1 << FS_FLAG_FILE_ACTIVE);
+    fs_header.flag = 0;
+    fs_header.flag |= (1 << FS_FLAG_MUST_ONE); //duh
+    fs_header.flag |= (1 << FS_FLAG_VALID_HEADER); //quoque duh
+    fs_header.flag |= (1 << FS_FLAG_FILE_ACTIVE);
 
-    f->flag &= ~(1 << FS_FLAG_MUST_ZERO); //pragmatics
+    fs_header.flag &= ~(1 << FS_FLAG_MUST_ZERO); //pragmatics
 
-    strcpy(f->name, name);
-    f->hash = fs_hash_dj2(name);
-    f->size = size;
+    strcpy(fs_header.name, name);
+    fs_header.hash = fs_hash_dj2(name);
+    fs_header.size = size;
 
+    fs_write_header(f);
     return f;
 }
 
 void fs_delete(fs_file_t f)
 {
+    fs_read_header(f);
+
     //wow, how simple
-    f->flag &= ~(1 << FS_FLAG_FILE_ACTIVE);
+    fs_header.flag &= ~(1 << FS_FLAG_FILE_ACTIVE);
+
+    fs_write_header(f);
 }
 
 
