@@ -9,7 +9,6 @@
 // if changed even slightly, wreck user data.
 
 #include <avr/io.h>
-#include <util/delay.h>
 
 #include <stdint.h>
 #include <stdbool.h>
