@@ -243,7 +243,7 @@ void sd_recache(uint32_t block)
 }
 
 
-uint8_t sd_read(uint32_t address)
+uint8_t sd_read_single(uint32_t address)
 {
     //compute block and index numbers
     uint32_t block = address >> SD_INDEX_BITS;
@@ -256,7 +256,7 @@ uint8_t sd_read(uint32_t address)
     return sd_cache[index];
 }
 
-void sd_write(uint32_t address, uint8_t value)
+void sd_write_single(uint32_t address, uint8_t value)
 {
     //compute block and index numbers
     uint32_t block = address >> SD_INDEX_BITS;
@@ -271,6 +271,18 @@ void sd_write(uint32_t address, uint8_t value)
     sd_cache_need_writeback = true; 
 
     sd_cache[index] = value;
+}
+
+
+void sd_read(uint32_t address, uint8_t* dst, uint32_t n)
+{
+    for (int i = 0; i < n; i++)
+        dst[i] = sd_read_single(address + i);
+}
+void sd_write(uint32_t address, uint8_t* src, uint32_t n)
+{
+    for (int i = 0; i < n; i++)
+        sd_write_single(address + i, src[i]);
 }
 
 
