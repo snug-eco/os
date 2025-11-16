@@ -14,14 +14,14 @@ The system is comprised of three main components, hardware wise:
 
         <h1>UART Terminal</h1>
         <pre>
-            The uart terminal is connect over on-board uart controller 1.
+            The uart terminal is connect over on-board UART controller 1.
             Ergo, port D, RX on PD2 and TX on PD3.
         </pre>
 
         <h1>SD mass storage</h1>
         <pre>
-            The SD card is connect over on-board uart controller 0 in MSPIM.
-            PB0 is SCK, PB1 is CS (SS), PD0 is MISO, PD1 is MOSI.
-            There is a 100k Ohm pull-up resister to protect the CS on PB1 from accidentally activating.
+            The SD card is connect over the on-board SPI controller.
+            PB7 is SCK, PB0 is CS (SS), PD6 is MISO, PD5 is MOSI.
+            There is a 100k Ohm pull-up resister to protect the CS on PB0 from accidentally activating.
         </pre>
     </body>
