@@ -4,6 +4,10 @@
 // this file is heavily commented
 // because the spi driver is pretty opaque.
 
+// DO NOT TOUCH THIS FILE (unless you know what you're doing)
+// this sd card driver contains sensitive code, which could
+// if changed even slightly, wreck user data.
+
 #include <avr/io.h>
 #include <util/delay.h>
 
@@ -163,8 +167,13 @@ void sd_init(void)
 
     if (!high_cap) sd_panic("Card is not SDHC or SDHX, Card is unsupported."); //only high capacity cards.
 
-    sd_print("Card initialized.");
     SD_CS_OFF(); 
+    sd_print("Card initialized.");
+
+    //switching into full speed.
+    // f_osc / 2 which defaults to ~0.5MHz
+    sd_print("Switching into full speed.");
+    SPCR &= ~((1 << SPR1) | (1 << SPR0)); //unset clock diviers
 }
 
 
@@ -206,26 +215,63 @@ void sd_write_block(uint32_t block, uint8_t* buffer)
 }
 
 //generic read/write cache
-static uint8_t  sd_block_cache[512];
-static uint32_t sd_block_cache_index = -1;
+static uint8_t  sd_cache[512];
+static uint32_t sd_cache_block = -1;
+static bool     sd_cache_need_writeback = false;
 
-uint8_t sd_read(uint32_t req_address)
+#define SD_INDEX_BITS 9
+#define SD_INDEX_SIZE (1 << 9)
+#define SD_INDEX_MASK (SD_INDEX_SIZE - 1)
+
+void sd_flush()
 {
-    uint32_t req_block_index  = req_address >> 9;
-    uint16_t req_block_offset = req_address & (512 - 1);
+    //if write has happened during cache cycle,
+    //write-back to card has to happen.
+    if (sd_cache_need_writeback)
+        sd_write_block(sd_cache_block, sd_cache);
 
-    //block invalidate
-    if (req_block_index != sd_block_cache_index)
-        sd_read_block(req_block_index, sd_block_cache);
-
-    sd_block_cache_index = req_block_index;
-
-    return sd_block_cache[req_block_offset];
+    sd_cache_need_writeback = false;
 }
 
-void sd_write(uint32_t req_address, uint8_t value)
+void sd_recache(uint32_t block)
 {
-    
+    //flush cache block to save writes.
+    sd_flush();
+
+    //read new block
+    sd_read_block(block, sd_cache);
+    sd_cache_block = block;
+}
+
+
+uint8_t sd_read(uint32_t address)
+{
+    //compute block and index numbers
+    uint32_t block = address >> SD_INDEX_BITS;
+    uint16_t index = address &  SD_INDEX_MASK;
+
+    //cache invalidate
+    if (block != sd_cache_block)
+        sd_recache(block);
+
+    return sd_cache[index];
+}
+
+void sd_write(uint32_t address, uint8_t value)
+{
+    //compute block and index numbers
+    uint32_t block = address >> SD_INDEX_BITS;
+    uint16_t index = address &  SD_INDEX_MASK;
+
+    //cache invalidate
+    if (block != sd_cache_block)
+        sd_recache(block);
+
+    //written during cache cycle,
+    //therefore as to write-back during recache.
+    sd_cache_need_writeback = true; 
+
+    sd_cache[index] = value;
 }
 
 
