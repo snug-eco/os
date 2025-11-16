@@ -28,7 +28,14 @@ int main(void)
     sd_init();
 
     sd_write_block(0, test_block1);
-    sd_read_block (0, test_block2);
+
+    kdebug("read start\n");
+    for (int i = 0; i < 100; i++)
+    {
+        sd_read_block (0, test_block2);
+        term_print(".");
+    }
+    kdebug("read done\n");
 
     for (int i = 0; i < 10; i++)
         khex(test_block2[i]);

@@ -70,7 +70,7 @@ void sd_spi_init(void)
     
     // enable spi master mode, set clock rate f_osc/16
     // at f_osc = 1MHz, f_osc / 16 < 400kHz, such that sd card an initialize
-    SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0) | (1 << SPR1);
+    SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
     SPCR &= ~(1 << SPI2X); //clear double speed
     SD_CS_OFF();
 }
@@ -103,7 +103,7 @@ uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
         if (!(resp & 0x80)) goto done;
     }
 
-    sd_print("Command transmission time-out.");
+    //sd_print("Command transmission time-out.");
 
 done:
     sd_spi_send(0xFF);
