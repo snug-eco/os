@@ -67,13 +67,10 @@ bool fs_check_valid(fs_file_t f)
 {
     fs_read_header(f);
     uint8_t flag = fs_header.flag;
-    kdebug("flags:");
-    khex8(flag);
     if (((flag >> FS_FLAG_MUST_ONE     ) & 1) != 1) return false;
     if (((flag >> FS_FLAG_MUST_ZERO    ) & 1) != 0) return false;
     if (((flag >> FS_FLAG_VALID_HEADER ) & 1) != 1) return false;
 
-    kdebug("valid\n");
     return true;
 }
 
@@ -141,11 +138,7 @@ fs_file_t fs_final()
     //kitty goes where it wants to :3
     while (fs_check_valid(kitty))
     {
-        kdebug("before kitty ");
-        khex32(kitty);
         kitty = fs_next(kitty);
-        kdebug("after  kitty ");
-        khex32(kitty);
     }
 
     return kitty;
@@ -154,12 +147,7 @@ fs_file_t fs_final()
 
 fs_file_t fs_create(char* name, uint32_t size)
 {
-    kdebug("fs_create: start\n");
-
     fs_file_t f = fs_final();
-    khex32(f);
-
-    kdebug("fs_create: final found\n");
 
     fs_read_header(f);
 
@@ -175,7 +163,6 @@ fs_file_t fs_create(char* name, uint32_t size)
     fs_header.size = size;
 
     fs_write_header(f);
-    kdebug("fs_create: header written, file created\n");
     return f;
 }
 
