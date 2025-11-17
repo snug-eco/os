@@ -11,6 +11,12 @@ void term_send(unsigned char byte)
     UDR1 = byte;
 }
 
+unsigned char term_recv()
+{
+    while (!(UCSR1A & (1<<RXC1)));
+    return UDR1;
+}
+
 void term_clear()
 {
     for (int i = 0; i < 30; i++)

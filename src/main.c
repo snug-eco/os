@@ -13,6 +13,7 @@
 //#define BAUD_SCALAR (F_CPU / (BAUD * 16))
 #define BAUD_SCALAR 12
 
+
 int main(void)
 {
     //terminal
@@ -21,13 +22,26 @@ int main(void)
     //sd card
     sd_init();
 
-    fs_create("test1", 10);
-    fs_create("test2", 20);
-    fs_create("test3", 30);
+    fs_file_t f = fs_seek("hello");
+    sd_addr_t addr = fs_open(f);
 
-    khex32(fs_seek("test1"));
-    khex32(fs_seek("test2"));
-    khex32(fs_seek("test3"));
+    uint32_t size = fs_size(f);
+
+    char buffer[100];
+    sd_read(addr, &buffer, size);
+    buffer[size] = '\0'; //termi
+
+    kdebug("size of hello: ");
+    khex8(size);
+
+    kdebug("content: ");
+    term_print(buffer);
+
+
+    fs_delete(f);
+
+
+
 
 
     return 0;

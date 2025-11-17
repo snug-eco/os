@@ -62,6 +62,12 @@ sd_addr_t fs_open(fs_file_t f)
     return (sd_addr_t)(f + sizeof(struct fs_header_s));
 }
 
+uint32_t fs_size(fs_file_t f)
+{
+    fs_read_header(f);
+    return fs_header.size;
+}
+
 
 bool fs_check_valid(fs_file_t f)
 {
@@ -113,6 +119,7 @@ fs_file_t fs_seek(char* name)
     {
         fs_read_header(doggie);
         if (fs_header.hash != name_hash)  goto next;
+        if (!(fs_header.flag & (1 << FS_FLAG_FILE_ACTIVE))) goto next;
         if (strcmp(fs_header.name, name)) goto next;
 
         return doggie;
@@ -122,12 +129,12 @@ fs_file_t fs_seek(char* name)
     }
 
     //over-run
-    return 0;
+    return -1;
 }
 
 bool fs_exists(char* name)
 {
-    return (fs_seek(name) != 0);
+    return (fs_seek(name) != (fs_file_t)-1);
 }
 
 fs_file_t fs_final()
