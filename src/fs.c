@@ -32,17 +32,14 @@ typedef sd_addr_t fs_file_t;
 
 
 static struct fs_header_s fs_header;
-static sd_addr_t _fs_cache_address = -1;
 
 void fs_read_header(fs_file_t f)
 {
-    //if (f != _fs_cache_address)
-        sd_read(
-            f, 
-            (uint8_t*)&fs_header, 
-            sizeof(struct fs_header_s)
-        );
-    //_fs_cache_address = f;
+    sd_read(
+        f, 
+        (uint8_t*)&fs_header, 
+        sizeof(struct fs_header_s)
+    );
 }
 
 void fs_write_header(fs_file_t f)
@@ -117,7 +114,7 @@ fs_file_t fs_seek(char* name)
     
     while (fs_check_valid(doggie))
     {
-        //fs_read_header(doggie);
+        fs_read_header(doggie);
         if (fs_header.hash != name_hash)  goto next;
         if (strcmp(fs_header.name, name)) goto next;
 

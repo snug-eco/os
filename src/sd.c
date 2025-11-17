@@ -195,8 +195,6 @@ void sd_read_block(uint32_t block, uint8_t* buffer)
 
 void sd_write_block(uint32_t block, uint8_t* buffer)
 {
-    kdebug("sd_write_block\n");
-
     sd_cmd(SD_CMD24, block);
 
     //throw data token
