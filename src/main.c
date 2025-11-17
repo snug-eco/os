@@ -25,6 +25,10 @@ int main(void)
     fs_create("test2", 20);
     fs_create("test3", 30);
 
+    khex32(fs_seek("test1"));
+    khex32(fs_seek("test2"));
+    khex32(fs_seek("test3"));
+
 
     return 0;
 }
