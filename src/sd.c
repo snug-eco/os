@@ -195,6 +195,8 @@ void sd_read_block(uint32_t block, uint8_t* buffer)
 
 void sd_write_block(uint32_t block, uint8_t* buffer)
 {
+    kdebug("sd_write_block\n");
+
     sd_cmd(SD_CMD24, block);
 
     //throw data token
@@ -220,7 +222,7 @@ static uint32_t sd_cache_block = -1;
 static bool     sd_cache_need_writeback = false;
 
 #define SD_INDEX_BITS 9
-#define SD_INDEX_SIZE (1 << 9)
+#define SD_INDEX_SIZE (1 << SD_INDEX_BITS)
 #define SD_INDEX_MASK (SD_INDEX_SIZE - 1)
 
 void sd_flush()

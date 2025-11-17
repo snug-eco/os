@@ -54,12 +54,20 @@ void kdebug(char* str)
     #endif
 }
 
-void khex(uint8_t byte)
+static char khex_digit[16] = "0123456789ABCDEF";
+void khex8(uint8_t byte)
 {
-    term_print("[HEX] 0x");
-    static char digit[16] = "0123456789ABCDEF";
-    term_send(digit[(byte >> 4) & 0xF]);
-    term_send(digit[(byte >> 0) & 0xF]);
+    term_print("[HEX8] 0x");
+    for (int off = 8; off; off -= 4)
+        term_send(khex_digit[(byte >> (off - 4)) & 0xF]);
+    term_send('\n');
+}
+
+void khex32(uint32_t word)
+{
+    term_print("[HEX32] 0x");
+    for (int off = 32; off; off -= 4)
+        term_send(khex_digit[(word >> (off - 4)) & 0xF]);
     term_send('\n');
 }
 
