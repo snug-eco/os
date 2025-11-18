@@ -1,0 +1,31 @@
+<html>
+    <head>
+        <title>Filesystem</title>
+    </head>
+    <body>
+        <h1>Filesystem</h1>
+        <pre>
+The filesystem is flat and does not model any hierarchy.
+Organizational hierarchy may be achieved through leveled identifiers.
+        </pre>
+
+        <h3>Implementation</h3>
+        <pre>
+The filesystem is implemented as a append-log.
+Each file consists of a header, followed by the content of the file.
+The header stores the name of the file, its hash (of the name), its length and an activity as well as validity flag.
+When creating a file, the end of the log is sought and a new file is appended to the log.
+When deleting a file, it is marked as inactive which cases it to be ignored in searches.
+Locating a file in the system involves walking over the sequence of files and comparing hashes, then names.
+The origin of the next file header is computed by advancing given the size of the current file.
+        </pre>
+        
+        <h3>Garbage Collection</h3>
+        <pre>
+A GC (garbage collection) pass involves deleting the files marked as inactive 
+and coping over the active files to prevent fragmentation.
+Such a GC pass has to place from time to time to ensure the efficiency of the system.
+GC passes may be preformed by the operating system itself or by external tools.
+        </pre>
+    </body>
+</html>
