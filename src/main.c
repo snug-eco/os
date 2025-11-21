@@ -8,6 +8,7 @@
 #include "term.c"
 #include "sd.c"
 #include "fs.c"
+#include "vm.c"
 
 //#define BAUD 9600UL
 //#define BAUD_SCALAR (F_CPU / (BAUD * 16))
@@ -22,26 +23,19 @@ int main(void)
     //sd card
     sd_init();
 
-    fs_file_t f = fs_seek("hello");
-    sd_addr_t addr = fs_open(f);
-
-    uint32_t size = fs_size(f);
-
-    char buffer[100];
-    sd_read(addr, &buffer, size);
-    buffer[size] = '\0'; //termi
-
-    kdebug("size of hello: ");
-    khex8(size);
-
-    kdebug("content: ");
-    term_print(buffer);
+    if (fs_exists("build"))
+    {
+        fs_file_t f = fs_seek("build");
+        vm_launch(f);
+        vm_launch(f);
+    }
+    else
+        kdebug("file hello not found");
 
 
-    fs_delete(f);
+    while(vm_pass());
 
-
-
+    kdebug("All processes died, shutting down system.");
 
 
     return 0;
