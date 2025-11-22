@@ -158,6 +158,14 @@ void vm_run(vm_proc_t p)
                     p->data_store[a++] = x;
                 } while (x != 0);
                 break;
+
+            //system instructions
+            case 0x80: goto yield;
+
+            default:
+                kdebug("Unkown instruction!\n");
+                khex8(inst);
+                kpanic("Crash\n");
         }
 
         #undef pull
