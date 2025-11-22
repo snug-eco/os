@@ -178,6 +178,7 @@ void vm_run(vm_proc_t p)
 
             //file system
             case 0x84: push(fs_exists(rsp(pull()))); break;
+            case 0x85: x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
                 
 
 
