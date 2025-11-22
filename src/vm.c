@@ -75,6 +75,7 @@ void vm_run(vm_proc_t p)
 
         #define push(x) vm_push(p, x)
         #define pull()  vm_pull(p)
+        #define r32(addr) *((uint32_t*)(&p->data_store[addr]))
 
         uint8_t inst = vm_read(p);
         uint8_t a, b, x;
@@ -111,8 +112,8 @@ void vm_run(vm_proc_t p)
 
             case 0x0e: push(p->var_store[vm_read(p)]); break;
             case 0x0f: p->var_store[vm_read(p)] = pull(); break;
-            case 0x10: push(p->data_store[pull()]); break;
-            case 0x11: x = pull(); p->data_store[pull()] = x; break;
+            case 0x10: a = pull(); push(p->data_store[a]); break;
+            case 0x11: a = pull(); p->data_store[a] = pull(); break;
 
             case 0x12: 
                 if (p->term_in_ready) 
@@ -161,6 +162,11 @@ void vm_run(vm_proc_t p)
 
             //system instructions
             case 0x80: goto yield;
+            case 0x81: sd_flush(); break;
+            case 0x82: 
+                push(sd_read_single(r32(pull()))); 
+                break;
+
 
             default:
                 kdebug("Unkown instruction!\n");
