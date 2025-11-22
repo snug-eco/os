@@ -179,6 +179,8 @@ void vm_run(vm_proc_t p)
             //file system
             case 0x84: push(fs_exists(rsp(pull()))); break;
             case 0x85: x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
+            case 0x86: a = pull(); r32(a) = fs_open(r32(a)); break;
+            case 0x87: a = pull(); r32(a) = fs_next(r32(a)); break;
                 
 
 
@@ -191,6 +193,7 @@ void vm_run(vm_proc_t p)
         #undef pull
         #undef push
     }
+    goto yield;
 
 die:
     p->active = false;
