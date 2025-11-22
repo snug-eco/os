@@ -27,7 +27,6 @@ int main(void)
     {
         fs_file_t f = fs_seek("build");
         vm_launch(f);
-        vm_launch(f);
     }
     else
         kdebug("file hello not found");

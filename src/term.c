@@ -4,18 +4,22 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+#define term_send_ready() (UCSR1A & (1<<UDRE1))
+#define term_recv_ready() (UCSR1A & (1<<RXC1))
+
 
 void term_send(unsigned char byte)
 {
-    while (!(UCSR1A & (1<<UDRE1)));
+    while (!term_send_ready());
     UDR1 = byte;
 }
 
 unsigned char term_recv()
 {
-    while (!(UCSR1A & (1<<RXC1)));
+    while (!term_recv_ready());
     return UDR1;
 }
+
 
 void term_clear()
 {
