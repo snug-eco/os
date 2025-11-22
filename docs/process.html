@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <title>Process</title>
+    </head>
+    <body>
+        <h1>Process</h1>
+        <pre>
+A process can be launched from a file containing a binary program.
+In the process's lifetime (active period) this binary program will be executed.
+        </pre>
+
+        <h3>Task Swapper</h3>
+        <pre>
+The task swapper distributes time between the active processes.
+Each process gets to run until it either yields or exceeds 2000 instruction cycles.
+Disk caching performance overhead is disregarded.
+There is now priority between processes. Time is distributed round-robbin-style.
+The act of going over and giving each process time is know as passing.
+        </pre>
+        
+        <h3>Terminal IO</h3>
+        <pre>
+If a process wishes to output a character to the terminal, it yields until the transmit buffer is empty.
+Processes read input indirectly from a cache, which is updated once per pass.
+If a process has read the input character it is flag in the process control block for having done so,
+and yields of it want another character. In this way the process waits for the pass to complete and
+for the next character to become available.
+        </pre>
+    </body>
+</html>
