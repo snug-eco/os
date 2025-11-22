@@ -75,7 +75,14 @@ void vm_run(vm_proc_t p)
 
         #define push(x) vm_push(p, x)
         #define pull()  vm_pull(p)
+
+        //read 32-bit value encoded as 4 byte struct
         #define r32(addr) *((uint32_t*)(&p->data_store[addr]))
+
+        //read string pointer (just address conversion)
+        #define rsp(addr) ((char*)&p->data_store[addr])
+         
+         
 
         uint8_t inst = vm_read(p);
         uint8_t a, b, x;
@@ -161,11 +168,17 @@ void vm_run(vm_proc_t p)
                 break;
 
             //system instructions
+            //sd disk 
             case 0x80: goto yield;
             case 0x81: sd_flush(); break;
-            case 0x82: 
+            case 0x82:
                 push(sd_read_single(r32(pull()))); 
                 break;
+            case 0x83: break; //TODO: impl
+
+            //file system
+            case 0x84: push(fs_exists(rsp(pull()))); break;
+                
 
 
             default:
