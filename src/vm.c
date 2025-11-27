@@ -95,7 +95,7 @@ void vm_run(vm_proc_t p)
             case 0x00: goto die;
 
             case 0x01: push(pull() + 1); break;
-            case 0x02: pull();
+            case 0x02: pull(); break;
             case 0x03:
                 a = pull(); b = pull();
                 push(a); push(b);
