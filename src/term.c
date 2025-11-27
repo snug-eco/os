@@ -23,6 +23,7 @@ unsigned char term_recv()
 
 void term_clear()
 {
+    term_send('\r');
     for (int i = 0; i < 30; i++)
         term_send('\n');
 }
@@ -52,7 +53,7 @@ void term_init(unsigned int baud)
     UCSR1C = (1<<UCSZ11)|(1<<UCSZ10);
 
     term_clear();
-    kprint("[TERM] Terminal UART 1 connection initialized.\n");
+    kprint("[TERM] Terminal UART 1 connection initialized.\n\r");
 }
 
 
@@ -64,6 +65,7 @@ void kdebug(char* str)
     #endif
 }
 
+
 static char khex_digit[16] = "0123456789ABCDEF";
 void khex8(uint8_t byte)
 {
@@ -71,6 +73,7 @@ void khex8(uint8_t byte)
     for (int off = 8; off; off -= 4)
         term_send(khex_digit[(byte >> (off - 4)) & 0xF]);
     term_send('\n');
+    term_send('\r');
 }
 
 void khex32(uint32_t word)

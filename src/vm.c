@@ -189,9 +189,9 @@ void vm_run(vm_proc_t p)
 
 
             default:
-                kdebug("Unkown instruction!\n");
+                kdebug("Unkown instruction!\n\r");
                 khex8(inst);
-                kpanic("Crash\n");
+                kpanic("Crash\n\r");
         }
 
         #undef pull

@@ -26,8 +26,8 @@ typedef uint32_t sd_addr_t;
 #define SD_ACMD41 0x29
 #define SD_CMD58  0x3A
 
-#define sd_panic(msg) kpanic("[SD] " msg "\n\tTry power cycling the SD-Card and device.\n")
-#define sd_print(msg) kprint("[SD] " msg "\n")
+#define sd_panic(msg) kpanic("[SD] " msg "\n\r\tTry power cycling the SD-Card and device.\n\r")
+#define sd_print(msg) kprint("[SD] " msg "\n\r")
 
 
 void sd_spi_send(uint8_t data)
