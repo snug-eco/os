@@ -14,8 +14,8 @@ struct vm_proc
     uint16_t counter;
     uint16_t size;
 
-    uint8_t return_stack[256];
-    uint8_t return_index;
+    uint16_t return_stack[128];
+    uint8_t  return_index;
 
     uint8_t working_stack[128];
     uint8_t working_index;
@@ -49,6 +49,10 @@ void vm_launch(fs_file_t f)
     p->counter = 0;
     p->return_index  = 0;
     p->working_index = 0;
+
+    //zero out data store
+    for (int i = 0; i < 256; i++)
+        p->data_store[i] = 0;
 }
 
 inline uint8_t vm_read(vm_proc_t p)
