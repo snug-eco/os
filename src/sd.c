@@ -174,6 +174,7 @@ void sd_init(void)
     // f_osc / 2 which defaults to ~0.5MHz
     sd_print("Switching into full speed.");
     SPCR &= ~((1 << SPR1) | (1 << SPR0)); //unset clock diviers
+    SPSR |= (1 << SPI2X);
 }
 
 
