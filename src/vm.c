@@ -22,6 +22,9 @@ struct vm_proc
 
     uint8_t  var_store[128];
     uint8_t data_store[256];
+
+    uint8_t cache[512];
+    sd_addr_t cache_block;
     
 } vm_procs[VM_N_PROC] = { 0 };
 
@@ -45,8 +48,6 @@ vm_proc_t vm_get_proc(vm_pid_t i)
 
 vm_pid_t vm_launch(fs_file_t f)
 {
-    khex32(f);
-
     vm_pid_t i = vm_inactive(); 
     if (i == VM_N_PROC) kpanic("Maximum process count reached.");
 
@@ -57,6 +58,7 @@ vm_pid_t vm_launch(fs_file_t f)
     p->counter = 0;
     p->return_index  = 0;
     p->working_index = 0;
+    p->cache_block = -1;
 
     //zero out data store
     for (int i = 0; i < 256; i++)
@@ -65,9 +67,29 @@ vm_pid_t vm_launch(fs_file_t f)
     return i;
 }
 
+void vm_kill(vm_pid_t i)
+{
+    vm_proc_t p = vm_get_proc(i);
+    p->active = false;
+}
+
 inline uint8_t vm_read(vm_proc_t p)
 {
-    uint8_t byte = sd_read_single(p->counter + p->binary);
+    sd_addr_t address = p->counter + p->binary;
+    
+    //compute block and index
+    uint32_t block = address >> SD_INDEX_BITS;
+    uint16_t index = address &  SD_INDEX_MASK;
+
+    //cache invalidate
+    if (block != p->cache_block)
+    {
+        sd_read_block(block, p->cache);
+        p->cache_block = block;
+    }
+
+    //normal read and advance
+    uint8_t byte = p->cache[index];
     p->counter++;
     return byte;
 }
@@ -171,7 +193,7 @@ void vm_run(vm_proc_t p)
             case 0x1c: x = pull(); push(pull() >> x); break;
             case 0x1d: push(~pull()); break;
 
-            case 0x1e: khex8(pull()); break;
+            case 0x1e: khex8(pull()); goto yield;
             case 0x1f:
                 a = pull();
                 do
@@ -204,6 +226,18 @@ void vm_run(vm_proc_t p)
                 x = (uint8_t)vm_launch(r32(pull()));
                 push(x);
                 break;
+            case 0x8c:
+                vm_kill(pull());
+                break;
+            case 0x8d:
+                push(vm_get_proc(pull())->active);
+                break;
+            
+            //io
+            case 0x8e:
+                push(p->term_in_ready);
+                break;
+                
 
             default:
                 kdebug("Unkown instruction!\n\r");
