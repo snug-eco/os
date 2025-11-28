@@ -26,23 +26,31 @@ struct vm_proc
 } vm_procs[VM_N_PROC] = { 0 };
 
 typedef struct vm_proc* vm_proc_t;
+typedef int vm_pid_t;
 
-vm_proc_t vm_inactive()
+vm_pid_t vm_inactive()
 {
     for (int i = 0; i < VM_N_PROC; i++)
         if (!vm_procs[i].active)
-            return &vm_procs[i];
+            return i;
 
-    return NULL;
+    return VM_N_PROC;
+}
+
+vm_proc_t vm_get_proc(vm_pid_t i)
+{
+    return &vm_procs[i];
 }
 
 
-
-void vm_launch(fs_file_t f)
+vm_pid_t vm_launch(fs_file_t f)
 {
-    vm_proc_t p = vm_inactive(); 
-    if (!p) kpanic("Maximum process count reached.");
+    khex32(f);
 
+    vm_pid_t i = vm_inactive(); 
+    if (i == VM_N_PROC) kpanic("Maximum process count reached.");
+
+    vm_proc_t p = vm_get_proc(i);
     p->active  = true;
     p->binary  = fs_open(f);
     p->size    = fs_size(f);
@@ -53,6 +61,8 @@ void vm_launch(fs_file_t f)
     //zero out data store
     for (int i = 0; i < 256; i++)
         p->data_store[i] = 0;
+
+    return i;
 }
 
 inline uint8_t vm_read(vm_proc_t p)
@@ -178,15 +188,22 @@ void vm_run(vm_proc_t p)
             case 0x82:
                 push(sd_read_single(r32(pull()))); 
                 break;
-            case 0x83: break; //TODO: impl
+            case 0x83: 
+                x = pull();
+                sd_write_single(r32(pull()), x);
+                break;
 
             //file system
             case 0x84: push(fs_exists(rsp(pull()))); break;
             case 0x85: x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
             case 0x86: a = pull(); r32(a) = fs_open(r32(a)); break;
             case 0x87: a = pull(); r32(a) = fs_next(r32(a)); break;
-                
 
+            //vm
+            case 0x8b: 
+                x = (uint8_t)vm_launch(r32(pull()));
+                push(x);
+                break;
 
             default:
                 kdebug("Unkown instruction!\n\r");
