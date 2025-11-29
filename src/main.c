@@ -23,13 +23,13 @@ int main(void)
     //sd card
     sd_init();
 
-    if (fs_exists("build"))
+    if (fs_exists("bin.init"))
     {
-        fs_file_t f = fs_seek("build");
+        fs_file_t f = fs_seek("bin.init");
         vm_launch(f);
     }
     else
-        kdebug("file hello not found");
+        kdebug("No init file found.");
 
 
     while(vm_pass());
