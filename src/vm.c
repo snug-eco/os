@@ -60,9 +60,11 @@ vm_pid_t vm_launch(fs_file_t f)
     p->working_index = 0;
     p->cache_block = -1;
 
-    //zero out data store
+    //zero out data stores
     for (int i = 0; i < 256; i++)
         p->data_store[i] = 0;
+    for (int i = 0; i < 128; i++)
+        p->var_store[i] = 0;
 
     return i;
 }
