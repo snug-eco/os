@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-// a valid header flag must at least xxxxx101
+// a valid header flag must at least x101xxxx
 enum fs_flag_fields
 {
     FS_FLAG_RESERVED0 = 0,

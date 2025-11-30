@@ -95,11 +95,11 @@ inline uint8_t vm_read(vm_proc_t p)
     p->counter++;
     return byte;
 }
-uint8_t vm_pull(vm_proc_t p)
+inline uint8_t vm_pull(vm_proc_t p)
 {
     return p->working_stack[--(p->working_index)];
 }
-void vm_push(vm_proc_t p, uint8_t x)
+inline void vm_push(vm_proc_t p, uint8_t x)
 {
     p->working_stack[(p->working_index)++] = x;
 }
@@ -238,6 +238,15 @@ void vm_run(vm_proc_t p)
             //io
             case 0x8e:
                 push(p->term_in_ready);
+                break;
+
+            //quad
+            case 0x90:
+                (r32(pull()))++;
+                break;
+
+            case 0x91:
+                push(r32(pull()) == r32(pull()));
                 break;
                 
 
