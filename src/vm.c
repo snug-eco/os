@@ -124,6 +124,7 @@ void vm_run(vm_proc_t p)
 
         uint8_t inst = vm_read(p);
         uint8_t a, b, x;
+        char* s;
         switch (inst)
         {
             case 0x00: goto die;
@@ -222,6 +223,18 @@ void vm_run(vm_proc_t p)
             case 0x85: x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
             case 0x86: a = pull(); r32(a) = fs_open(r32(a)); break;
             case 0x87: a = pull(); r32(a) = fs_next(r32(a)); break;
+
+            case 0x88:
+                x = pull();
+                s = rsp(pull());
+                r32(pull()) = fs_create(s, x << 9);
+                break;
+            case 0x89:
+                fs_delete(r32(pull()));
+                break;
+            case 0x8a:
+                push(fs_size(r32(pull())) >> 9);
+                break;
 
             //vm
             case 0x8b: 
