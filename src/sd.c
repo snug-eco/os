@@ -73,8 +73,8 @@ void sd_spi_init(void)
     PORTB |= (1 << PB4);
     
     // enable spi master mode, set clock rate f_osc/16
-    // at f_osc = 1MHz, f_osc / 16 < 400kHz, such that sd card an initialize
-    SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
+    // at f_osc = 8MHz, f_osc / 128 < 400kHz, such that sd card an initialize
+    SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR1) | (1 << SPR0);
     SPCR &= ~(1 << SPI2X); //clear double speed
     SD_CS_OFF();
 }

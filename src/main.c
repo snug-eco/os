@@ -1,4 +1,4 @@
-#define F_CPU 1000000UL
+#define F_CPU 8000000UL
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -10,13 +10,19 @@
 #include "fs.c"
 #include "vm.c"
 
-//#define BAUD 9600UL
-//#define BAUD_SCALAR (F_CPU / (BAUD * 16))
-#define BAUD_SCALAR 12
+//async normal speed -> f_osc / (16 * BAUD) + 1
+//   8MHz / (16 * 4800) - 1
+// = 500_000Hz / 4800 - 1
+//~= 104 - 1 = 103
+#define BAUD_SCALAR 103 //4800 baud
 
 
 int main(void)
 {
+    //unset clock prescaler
+    CLKPR = (1 << CLKPCE);
+    CLKPR = 0;
+
     //terminal
     term_init(BAUD_SCALAR);
 
