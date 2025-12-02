@@ -261,6 +261,18 @@ void vm_run(vm_proc_t p)
             case 0x91:
                 push(r32(pull()) == r32(pull()));
                 break;
+
+            case 0x92:
+                x = pull();
+                (r32(pull())) += x;
+                break;
+
+            case 0x93:
+                (r32(pull()))--;
+                break;
+
+
+                    
                 
 
             default:
