@@ -48,12 +48,12 @@ uint8_t sd_spi_recv()
 //remember: active low
 void SD_CS_ON()
 {
-    PORTB &= ~(1 << PB0);
+    PORTD &= ~(1 << PD0);
     sd_spi_send(0xFF);
 }
 void SD_CS_OFF()
 {
-    PORTB |=  (1 << PB0);
+    PORTD |=  (1 << PD0);
     sd_spi_send(0xFF);
 }
 
@@ -64,9 +64,10 @@ void SD_CS_OFF()
 void sd_spi_init(void)
 {
     //set io modes
+    DDRD |=  (1 << PD0); //CS
+
     DDRB |=  (1 << PB5); //MOSI
     DDRB |=  (1 << PB7); //SCK
-    DDRB |=  (1 << PB0); //CS
     DDRB |=  (1 << PB4); //SS (not used, must still be set)
     DDRB &= ~(1 << PB6); // MISO
     
