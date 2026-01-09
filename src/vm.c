@@ -1,5 +1,5 @@
 
-//8 concurrent programs
+//4 concurrent programs
 #define VM_N_PROC 4
 
 char vm_term_in_cache;
@@ -29,10 +29,14 @@ struct vm_proc
     
 } vm_procs[VM_N_PROC] = { 0 };
 
-#define VM_HEAP_HEADER_SIZE 3
-#define VM_HEAP_SIZE 8000
-uint8_t vm_heap[VM_HEAP_SIZE] = { 0 };
+#define VM_HEAP_SIZE 2000
+vint_t vm_heap[VM_HEAP_SIZE] = { 0 };
 
+//one-word header
+#define VM_HEAP_HEADER_SIZE 1
+#define VM_HEAP_GET_LEN(header) ((header & 0x00FF) >> 0)
+#define VM_HEAP_GET_PID(header) ((header & 0x0F00) >> 16)
+#define VM_HEAP_HEADER(size, pid) (size | (pid << 8))
 
 
 typedef struct vm_proc* vm_proc_t;
@@ -41,19 +45,20 @@ typedef uint8_t vm_pid_t;
 
 vint_t vm_heap_alloc(vm_pid_t id, vint_t words)
 {
-    //needed bytes
-    uint16_t needed = (words * sizeof(vint_t)) + VM_HEAP_HEADER_SIZE;
+    //needed words
+    uint16_t needed = (words) + VM_HEAP_HEADER_SIZE;
 
     // *collars and leashes you* let's go for walkies~ 
-    uint8_t* walker = vm_heap;
+    vint_t walker = 0;
 
     vint_t trial = needed;
+    vint_t block;
     while (trial > 0) //trial running
     {
-        if (*walker)
+        if ((block = vm_heap[walker]))
         { 
-            walker += (*(uint16_t*)walker); //skip block
-            trial   = needed             ; //restart trial
+            walker += VM_HEAP_GET_LEN(block); //skip block
+            trial   = needed                ; //restart trial
         }
         else
         {
@@ -62,47 +67,48 @@ vint_t vm_heap_alloc(vm_pid_t id, vint_t words)
         }
     }
 
-    uint8_t* ptr = walker - needed;
-    *((uint16_t*)ptr) = needed; // size header
-    *(ptr + 2)       = id;     // owner process
-    return (uintptr_t)(ptr + 3);  // compute and return base address
+    vint_t ptr = walker - needed;
+    vm_heap[ptr] = VM_HEAP_HEADER(needed, id);
+    return ptr + VM_HEAP_HEADER_SIZE;  // compute and return base address
 }
 
 void vm_heap_free(vint_t base)
 {
-    uint8_t* ptr = ((uintptr_t)base) - 3; // compute block origin
-    uint16_t size = *((uint16_t*)ptr);
+    vint_t ptr = base - VM_HEAP_HEADER_SIZE; // compute block origin
+    uint16_t size = VM_HEAP_GET_LEN(vm_heap[ptr]);
 
     for (uint16_t i = 0; i < size; i++)
-        *(ptr + i) = 0;
+        vm_heap[ptr + i] = 0;
 }
 
-void vm_heap_free_process(vm_pid_t id)
+void vm_heap_free_process(vm_pid_t owner_pid)
 {
     //walk entire heap and free all blocks owned by id
     uint16_t zeros_remaining = 0;
-    uint16_t i = 0;
+    uint16_t addr = 0;
 
-    while (i < VM_HEAP_SIZE)
+    vint_t block;
+    while (addr < VM_HEAP_SIZE)
         if (zeros_remaining > 0)
         {
-            vm_heap[i] = 0;
+            vm_heap[addr] = 0;
             zeros_remaining--;
-            i++;
+            addr++;
         }
-        else if (vm_heap[i]) 
+        else if ((block = vm_heap[addr]))
         {
-            uint16_t size = *(uint16_t*)(vm_heap + i);
+            uint16_t size      = VM_HEAP_GET_LEN(block);
+            vm_pid_t block_pid = VM_HEAP_GET_PID(block);
 
             // block belongs to process
-            if (vm_heap[i+2] == id)
+            if (owner_pid == block_pid)
                 //parse header and start zeroing
                 zeros_remaining = size;
 
             else //otherwise skip
-                i += size;
+                addr += size;
         }
-        else i++;
+        else addr++;
 }
 
 
@@ -184,14 +190,11 @@ inline void vm_push(vm_proc_t p, vint_t x)
 
 static char* vm_read_quad_string(vint_t addr)
 {
-    //re-interpret
-    uint32_t* ptr = (uintptr_t)addr;
-
     static char buffer[128];
 
     uint8_t i = 0;
-    for (; ptr[i]; i++)
-        buffer[i] = ptr[i];
+    for (; vm_heap[i]; i++)
+        buffer[i] = vm_heap[addr + i];
 
     buffer[i] = '\0';
 
@@ -218,7 +221,7 @@ void vm_run(vm_pid_t id)
         vint_t a, b, x;
         char* s;
 
-        uint32_t* addr;
+        uint32_t addr;
         switch (inst)
         {
             case 0x00: goto die;
@@ -252,8 +255,8 @@ void vm_run(vm_pid_t id)
 
             case 0x0e: push(p->var_store[vm_read(p)]); break;
             case 0x0f: p->var_store[vm_read(p)] = pull(); break;
-            case 0x10: addr = (uint32_t*)pull(); push(*addr); break;
-            case 0x11: addr = (uint32_t*)pull(); *addr = pull(); break;
+            case 0x10: addr = pull(); push(vm_heap[addr]); break;
+            case 0x11: addr = pull(); vm_heap[addr] = pull(); break;
 
             case 0x12: 
                 if (p->term_in_ready) 
@@ -292,11 +295,11 @@ void vm_run(vm_pid_t id)
             case 0x1e: push(!pull()); break;
 
             case 0x1f:
-                addr = (uint32_t*)(pull());
+                addr = pull();
                 do
                 {
                     x = vm_read(p);
-                    *addr++ = x;
+                    vm_heap[addr++] = x;
                 } while (x != 0);
                 break;
 
