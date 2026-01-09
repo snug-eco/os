@@ -200,10 +200,11 @@ void vm_run(vm_pid_t id)
          
 
         uint8_t inst = vm_read(p);
-        uint8_t a, b, x;
+        vint_t a, b, x;
         char* s;
 
         uint32_t* addr;
+        khex8(inst);
         switch (inst)
         {
             case 0x00: goto die;
@@ -277,11 +278,11 @@ void vm_run(vm_pid_t id)
 
             case 0x1e: khex32(pull()); goto yield;
             case 0x1f:
-                a = pull();
+                addr = (uint32_t*)(pull());
                 do
                 {
                     x = vm_read(p);
-                    //p->data_store[a++] = x;
+                    *addr++ = x;
                 } while (x != 0);
                 break;
 
