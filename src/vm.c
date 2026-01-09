@@ -204,7 +204,6 @@ void vm_run(vm_pid_t id)
         char* s;
 
         uint32_t* addr;
-        khex8(inst);
         switch (inst)
         {
             case 0x00: goto die;
