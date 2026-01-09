@@ -82,6 +82,7 @@ void khex32(uint32_t word)
     for (int off = 32; off; off -= 4)
         term_send(khex_digit[(word >> (off - 4)) & 0xF]);
     term_send('\n');
+    term_send('\r');
 }
 
 void kpanic(char* str)
