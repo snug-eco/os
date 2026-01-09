@@ -79,7 +79,6 @@ void vm_heap_free(vint_t base)
 
 void vm_heap_free_process(vm_pid_t id)
 {
-    kdebug("vm_heap_free_process.\n\r");
     //walk entire heap and free all blocks owned by id
     uint16_t zeros_remaining = 0;
     uint16_t i = 0;
@@ -93,22 +92,13 @@ void vm_heap_free_process(vm_pid_t id)
         }
         else if (vm_heap[i]) 
         {
-            kdebug("found block.\n\r");
-            khex32(i);
             uint16_t size = *(uint16_t*)(vm_heap + i);
-            khex32(size);
-            khex32(vm_heap[i+2]);
 
             // block belongs to process
             if (vm_heap[i+2] == id)
-            {
-                kdebug("found matching block. zeroing. \r\n");
-
                 //parse header and start zeroing
                 zeros_remaining = size;
-                khex32(zeros_remaining);
-                khex32(id);
-            }
+
             else //otherwise skip
                 i += size;
         }
@@ -134,15 +124,8 @@ vm_proc_t vm_get_proc(vm_pid_t i)
 
 vm_pid_t vm_launch(fs_file_t f)
 {
-    kdebug("vm_launch(): ");
-    fs_read_header(f);
-    term_print(fs_header.name);
-    term_print("\n\r");
-
     vm_pid_t i = vm_inactive(); 
     if (i == VM_N_PROC) kpanic("Maximum process count reached.");
-
-    khex8(i);
 
     vm_proc_t p = vm_get_proc(i);
     p->active  = true;
@@ -162,9 +145,6 @@ vm_pid_t vm_launch(fs_file_t f)
 
 void vm_kill(vm_pid_t id)
 {
-    kdebug("vm_kill.");
-    khex8(id);
-    kdebug("\r\n");
     vm_proc_t p = vm_get_proc(id);
     p->active = false;
 
@@ -306,8 +286,8 @@ void vm_run(vm_pid_t id)
             case 0x1b: x = pull(); push(pull() << x); break;
             case 0x1c: x = pull(); push(pull() >> x); break;
             case 0x1d: push(~pull()); break;
+            case 0x1e: push(!pull()); break;
 
-            case 0x1e: khex32(pull()); goto yield;
             case 0x1f:
                 addr = (uint32_t*)(pull());
                 do
@@ -316,6 +296,9 @@ void vm_run(vm_pid_t id)
                     *addr++ = x;
                 } while (x != 0);
                 break;
+
+            case 0x20: khex32(pull()); goto yield;
+
 
             //system instructions
             //sd disk 

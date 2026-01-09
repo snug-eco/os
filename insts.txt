@@ -35,10 +35,13 @@
 0x1a XOR (a b -- a^b)
 0x1b SHL (a o -- a << o)
 0x1c SHR (a o -- a >> o)
-0x1d NOT (a   -- ~a)
+0x1d INV (a   -- ~a)
+0x1e NOT (a   -- !a)
 
-0x1e DBG (a --)             debug top
 0x1f STR x (ptr* --)        read string into memory
+0x20 DBG (a --)             debug top
+
+
 
 
 0x80 S00 -- (yield to task swapper)
