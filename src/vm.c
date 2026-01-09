@@ -299,14 +299,14 @@ void vm_run(vm_pid_t id)
 
             //file system
             case 0x84: push(fs_exists(rsp(pull()))); break;
-            case 0x85: //x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
-            case 0x86: a = pull(); a = fs_open(a); break;
-            case 0x87: a = pull(); a = fs_next(a); break;
+            case 0x85: push(fs_seek  (rsp(pull()))); break;
+            case 0x86: push(fs_open(pull())); break;
+            case 0x87: push(fs_next(pull())); break;
 
             case 0x88:
                 x = pull();
                 s = rsp(pull());
-                //r32(pull()) = fs_create(s, x);
+                push(fs_create(s, x));
                 break;
             case 0x89:
                 fs_delete(pull());
@@ -332,6 +332,13 @@ void vm_run(vm_pid_t id)
                 push(p->term_in_ready);
                 break;
                     
+            //heap
+            case 0x90:
+                push(vm_heap_alloc(id, pull()));
+                break;
+            case 0x91:
+                vm_heap_free(pull());
+                break;
                 
 
             default:
