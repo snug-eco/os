@@ -79,18 +79,40 @@ void vm_heap_free(vint_t base)
 
 void vm_heap_free_process(vm_pid_t id)
 {
+    kdebug("vm_heap_free_process.\n\r");
     //walk entire heap and free all blocks owned by id
     uint16_t zeros_remaining = 0;
-    for (uint16_t i = 0; i < VM_HEAP_SIZE; i++)
+    uint16_t i = 0;
+
+    while (i < VM_HEAP_SIZE)
         if (zeros_remaining > 0)
         {
             vm_heap[i] = 0;
             zeros_remaining--;
+            i++;
         }
-        else if (vm_heap[i]) if (vm_heap[i+2] == id)
+        else if (vm_heap[i]) 
+        {
+            kdebug("found block.\n\r");
+            khex32(i);
+            uint16_t size = *(uint16_t*)(vm_heap + i);
+            khex32(size);
+            khex32(vm_heap[i+2]);
 
-            //parse header and start zeroing
-            zeros_remaining = *(uint16_t*)(vm_heap + i);
+            // block belongs to process
+            if (vm_heap[i+2] == id)
+            {
+                kdebug("found matching block. zeroing. \r\n");
+
+                //parse header and start zeroing
+                zeros_remaining = size;
+                khex32(zeros_remaining);
+                khex32(id);
+            }
+            else //otherwise skip
+                i += size;
+        }
+        else i++;
 }
 
 
@@ -112,8 +134,15 @@ vm_proc_t vm_get_proc(vm_pid_t i)
 
 vm_pid_t vm_launch(fs_file_t f)
 {
+    kdebug("vm_launch(): ");
+    fs_read_header(f);
+    term_print(fs_header.name);
+    term_print("\n\r");
+
     vm_pid_t i = vm_inactive(); 
     if (i == VM_N_PROC) kpanic("Maximum process count reached.");
+
+    khex8(i);
 
     vm_proc_t p = vm_get_proc(i);
     p->active  = true;
@@ -133,6 +162,9 @@ vm_pid_t vm_launch(fs_file_t f)
 
 void vm_kill(vm_pid_t id)
 {
+    kdebug("vm_kill.");
+    khex8(id);
+    kdebug("\r\n");
     vm_proc_t p = vm_get_proc(id);
     p->active = false;
 
