@@ -193,8 +193,9 @@ static char* vm_read_quad_string(vint_t addr)
     static char buffer[128];
 
     uint8_t i = 0;
-    for (; vm_heap[i]; i++)
-        buffer[i] = vm_heap[addr + i];
+    vint_t word;
+    for (; (word = vm_heap[addr + i]); i++)
+        buffer[i] = word;
 
     buffer[i] = '\0';
 
