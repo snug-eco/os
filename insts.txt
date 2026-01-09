@@ -1,0 +1,71 @@
+
+0x00 BRK (--)               halt execution
+
+0x01 INC (a -- a+1)         increment top
+0x02 POP (a --)             pop top
+0x03 SWP (a b -- b a)       swap top and snd
+0x04 DUP (a -- a a)         duplicate top
+0x05 LIT x (-- a)           push literal
+
+0x06 EQU (a b -- a=b)       test equality
+0x07 NEQ (a b -- a≠b)       test inequality
+0x08 GTH (a b -- a>b)       test greater
+0x09 LTH (a b -- a<b)       test lesser
+
+0x0a JMP x (--)             jump to program address
+0x0b JCN x (cond --)        jump conditional to program address
+0x0c JSR x (-- | pc*)       jump into subroutine
+0x0d RET (| addr* --)       return from subroutine
+
+0x0e LDV x (-- val)         load variable
+0x0f STV x (val --)         store variable
+0x10 LDA (ptr* -- [ptr*])   load from memory
+0x11 STA (val ptr* --)      store to memory
+
+0x12 INP (-- char) [yields] input character and yield to task swapper
+0x13 OUT (char --)          output character
+
+0x14 ADD (a b -- a+b)
+0x15 SUB (a b -- a-b)
+0x16 MUL (a b -- a×b)
+0x17 DIV (a b -- a÷b)
+
+0x18 AND (a b -- a&b)
+0x19 AOR (a b -- a|b)
+0x1a XOR (a b -- a^b)
+0x1b SHL (a o -- a << o)
+0x1c SHR (a o -- a >> o)
+0x1d NOT (a   -- ~a)
+
+0x1e DBG (a --)             debug top
+0x1f STR x (ptr* --)        read string into memory
+
+
+0x80 S00 -- (yield to task swapper)
+0x81 S01 -- (flush disk cache)
+0x82 S02 addr* -- byte (read  disk)
+0x83 S03 addr* byte -- (write disk)
+    addr is 4 byte contiguous struct
+    addr 0xff is considered invalid
+
+0x84 S04 name* -- bool (check file exists)
+0x85 S05 addr* name* -- (seek file)
+0x86 S06 addr* -- (open file)
+0x87 S07 addr* -- (next file)
+(
+    0x88 S08 addr* name* size -- (create file)
+    0x89 S09 addr* -- (delete file)
+    0x8a S10 addr* size* -- (size file)
+)
+
+0x8b S11 addr* -- id (launch process)
+0x8c S12 id -- (kill process)
+0x8d S13 id -- bool (check process active)
+
+0x8e S14 -- bool (check term recv ready)
+
+
+
+
+
+
