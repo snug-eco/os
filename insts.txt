@@ -43,19 +43,17 @@
 
 0x80 S00 -- (yield to task swapper)
 0x81 S01 -- (flush disk cache)
-0x82 S02 addr* -- byte (read  disk)
-0x83 S03 addr* byte -- (write disk)
-    addr is 4 byte contiguous struct
-    addr 0xff is considered invalid
+0x82 S02 addr -- byte (read  disk)
+0x83 S03 addr byte -- (write disk)
 
 0x84 S04 name* -- bool (check file exists)
-0x85 S05 addr* name* -- (seek file)
-0x86 S06 addr* -- (open file)
-0x87 S07 addr* -- (next file)
+0x85 S05 addr name* -- (seek file)
+0x86 S06 addr -- (open file)
+0x87 S07 addr -- (next file)
 (
-    0x88 S08 addr* name* size -- (create file)
-    0x89 S09 addr* -- (delete file)
-    0x8a S10 addr* size* -- (size file)
+    0x88 S08 addr name* size -- (create file)
+    0x89 S09 addr -- (delete file)
+    0x8a S10 addr -- size (size file)
 )
 
 0x8b S11 addr* -- id (launch process)
@@ -64,6 +62,8 @@
 
 0x8e S14 -- bool (check term recv ready)
 
+0x90 S16 words -- base (allocate words on heap and return pointer)
+0x91 S17 base --       (free words on heap at base)
 
 
 
