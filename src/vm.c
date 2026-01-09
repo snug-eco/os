@@ -1,8 +1,10 @@
 
 //8 concurrent programs
-#define VM_N_PROC 8
+#define VM_N_PROC 4
 
 char vm_term_in_cache;
+
+typedef uint32_t vint_t;
 
 //this pcb shall not exceed 1k of memory
 struct vm_proc
@@ -14,19 +16,21 @@ struct vm_proc
     uint16_t counter;
     uint16_t size;
 
-    uint16_t return_stack[128];
+    uint16_t return_stack[60];
     uint8_t  return_index;
 
-    uint8_t working_stack[128];
+    vint_t working_stack[120];
     uint8_t working_index;
 
-    uint8_t  var_store[128];
-    uint8_t data_store[256];
+    vint_t var_store[120];
 
     uint8_t cache[512];
     sd_addr_t cache_block;
     
 } vm_procs[VM_N_PROC] = { 0 };
+
+uint8_t vm_heap[8000] = { 0 };
+
 
 typedef struct vm_proc* vm_proc_t;
 typedef int vm_pid_t;
@@ -60,10 +64,8 @@ vm_pid_t vm_launch(fs_file_t f)
     p->working_index = 0;
     p->cache_block = -1;
 
-    //zero out data stores
-    for (int i = 0; i < 256; i++)
-        p->data_store[i] = 0;
-    for (int i = 0; i < 128; i++)
+    //zero out
+    for (int i = 0; i < 120; i++)
         p->var_store[i] = 0;
 
     return i;
@@ -95,15 +97,28 @@ inline uint8_t vm_read(vm_proc_t p)
     p->counter++;
     return byte;
 }
-inline uint8_t vm_pull(vm_proc_t p)
+inline vint_t vm_pull(vm_proc_t p)
 {
     return p->working_stack[--(p->working_index)];
 }
-inline void vm_push(vm_proc_t p, uint8_t x)
+inline void vm_push(vm_proc_t p, vint_t x)
 {
     p->working_stack[(p->working_index)++] = x;
 }
 
+
+static char* vm_read_quad_string(vint_t addr)
+{
+    //re-interpret
+    uint32_t* ptr = (uintptr_t)addr;
+
+    static char buffer[128];
+
+    for (uint8_t i = 0; ptr[i]; i++)
+        buffer[i] = ptr[i];
+
+    return buffer;
+}
 
 void vm_run(vm_proc_t p)
 {
@@ -114,17 +129,17 @@ void vm_run(vm_proc_t p)
         #define push(x) vm_push(p, x)
         #define pull()  vm_pull(p)
 
-        //read 32-bit value encoded as 4 byte struct
-        #define r32(addr) *((uint32_t*)(&p->data_store[addr]))
-
         //read string pointer (just address conversion)
-        #define rsp(addr) ((char*)&p->data_store[addr])
+        //!TODO redefine
+        #define rsp(addr) vm_read_quad_string(addr)
          
          
 
         uint8_t inst = vm_read(p);
         uint8_t a, b, x;
         char* s;
+
+        uint32_t* addr;
         switch (inst)
         {
             case 0x00: goto die;
@@ -136,7 +151,7 @@ void vm_run(vm_proc_t p)
                 push(a); push(b);
                 break;
             case 0x04: x = pull(); push(x); push(x); break;
-            case 0x05: push(vm_read(p)); break;
+            case 0x05: push((vint_t)vm_read(p)); break;
             
             case 0x06: push(pull() == pull()); break;
             case 0x07: push(pull() != pull()); break;
@@ -158,8 +173,8 @@ void vm_run(vm_proc_t p)
 
             case 0x0e: push(p->var_store[vm_read(p)]); break;
             case 0x0f: p->var_store[vm_read(p)] = pull(); break;
-            case 0x10: a = pull(); push(p->data_store[a]); break;
-            case 0x11: a = pull(); p->data_store[a] = pull(); break;
+            case 0x10: addr = (uint32_t*)pull(); push(*addr); break;
+            case 0x11: addr = (uint32_t*)pull(); *addr = pull(); break;
 
             case 0x12: 
                 if (p->term_in_ready) 
@@ -196,13 +211,13 @@ void vm_run(vm_proc_t p)
             case 0x1c: x = pull(); push(pull() >> x); break;
             case 0x1d: push(~pull()); break;
 
-            case 0x1e: khex8(pull()); goto yield;
+            case 0x1e: khex32(pull()); goto yield;
             case 0x1f:
                 a = pull();
                 do
                 {
                     x = vm_read(p);
-                    p->data_store[a++] = x;
+                    //p->data_store[a++] = x;
                 } while (x != 0);
                 break;
 
@@ -211,34 +226,34 @@ void vm_run(vm_proc_t p)
             case 0x80: goto yield;
             case 0x81: sd_flush(); break;
             case 0x82:
-                push(sd_read_single(r32(pull()))); 
+                push(sd_read_single(pull())); 
                 break;
             case 0x83: 
                 x = pull();
-                sd_write_single(r32(pull()), x);
+                sd_write_single(pull(), x);
                 break;
 
             //file system
             case 0x84: push(fs_exists(rsp(pull()))); break;
-            case 0x85: x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
-            case 0x86: a = pull(); r32(a) = fs_open(r32(a)); break;
-            case 0x87: a = pull(); r32(a) = fs_next(r32(a)); break;
+            case 0x85: //x = pull(); r32(pull()) = (fs_seek(rsp(x))); break;
+            case 0x86: a = pull(); a = fs_open(a); break;
+            case 0x87: a = pull(); a = fs_next(a); break;
 
             case 0x88:
                 x = pull();
                 s = rsp(pull());
-                r32(pull()) = fs_create(s, x << 9);
+                //r32(pull()) = fs_create(s, x);
                 break;
             case 0x89:
-                fs_delete(r32(pull()));
+                fs_delete(pull());
                 break;
             case 0x8a:
-                push(fs_size(r32(pull())) >> 9);
+                push(fs_size(pull()));
                 break;
 
             //vm
             case 0x8b: 
-                x = (uint8_t)vm_launch(r32(pull()));
+                x = vm_launch(pull());
                 push(x);
                 break;
             case 0x8c:
@@ -252,26 +267,6 @@ void vm_run(vm_proc_t p)
             case 0x8e:
                 push(p->term_in_ready);
                 break;
-
-            //quad
-            case 0x90:
-                (r32(pull()))++;
-                break;
-
-            case 0x91:
-                push(r32(pull()) == r32(pull()));
-                break;
-
-            case 0x92:
-                x = pull();
-                (r32(pull())) += x;
-                break;
-
-            case 0x93:
-                (r32(pull()))--;
-                break;
-
-
                     
                 
 
