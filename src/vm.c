@@ -189,8 +189,11 @@ static char* vm_read_quad_string(vint_t addr)
 
     static char buffer[128];
 
-    for (uint8_t i = 0; ptr[i]; i++)
+    uint8_t i = 0;
+    for (; ptr[i]; i++)
         buffer[i] = ptr[i];
+
+    buffer[i] = '\0';
 
     return buffer;
 }
