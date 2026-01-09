@@ -29,11 +29,71 @@ struct vm_proc
     
 } vm_procs[VM_N_PROC] = { 0 };
 
-uint8_t vm_heap[8000] = { 0 };
+#define VM_HEAP_HEADER_SIZE 3
+#define VM_HEAP_SIZE 8000
+uint8_t vm_heap[VM_HEAP_SIZE] = { 0 };
+
 
 
 typedef struct vm_proc* vm_proc_t;
-typedef int vm_pid_t;
+typedef uint8_t vm_pid_t;
+
+
+vint_t vm_heap_alloc(vm_pid_t id, vint_t words)
+{
+    //needed bytes
+    uint16_t needed = (words * sizeof(vint_t)) + VM_HEAP_HEADER_SIZE;
+
+    // *collars and leashes you* let's go for walkies~ 
+    uint8_t* walker = vm_heap;
+
+    vint_t trial = needed;
+    while (trial > 0) //trial running
+    {
+        if (*walker)
+        { 
+            walker += (*(uint16_t*)walker); //skip block
+            trial   = needed             ; //restart trial
+        }
+        else
+        {
+            walker++;
+            trial--;
+        }
+    }
+
+    uint8_t* ptr = walker - needed;
+    *((uint16_t*)ptr) = needed; // size header
+    *(ptr + 2)       = id;     // owner process
+    return (uintptr_t)(ptr + 3);  // compute and return base address
+}
+
+void vm_heap_free(vint_t base)
+{
+    uint8_t* ptr = ((uintptr_t)base) - 3; // compute block origin
+    uint16_t size = *((uint16_t*)ptr);
+
+    for (uint16_t i = 0; i < size; i++)
+        *(ptr + i) = 0;
+}
+
+void vm_heap_free_process(vm_pid_t id)
+{
+    //walk entire heap and free all blocks owned by id
+    uint16_t zeros_remaining = 0;
+    for (uint16_t i = 0; i < VM_HEAP_SIZE; i++)
+        if (zeros_remaining > 0)
+        {
+            vm_heap[i] = 0;
+            zeros_remaining--;
+        }
+        else if (vm_heap[i]) if (vm_heap[i+2] == id)
+
+            //parse header and start zeroing
+            zeros_remaining = *(uint16_t*)(vm_heap + i);
+}
+
+
 
 vm_pid_t vm_inactive()
 {
@@ -71,10 +131,13 @@ vm_pid_t vm_launch(fs_file_t f)
     return i;
 }
 
-void vm_kill(vm_pid_t i)
+void vm_kill(vm_pid_t id)
 {
-    vm_proc_t p = vm_get_proc(i);
+    vm_proc_t p = vm_get_proc(id);
     p->active = false;
+
+    // free all heap block associated with process
+    vm_heap_free_process(id);
 }
 
 inline uint8_t vm_read(vm_proc_t p)
@@ -120,8 +183,10 @@ static char* vm_read_quad_string(vint_t addr)
     return buffer;
 }
 
-void vm_run(vm_proc_t p)
+void vm_run(vm_pid_t id)
 {
+    vm_proc_t p = vm_get_proc(id);
+
     for (int i = 0; i < 2000; i++)
     {
         if (p->counter >= p->size) goto die;
@@ -130,7 +195,6 @@ void vm_run(vm_proc_t p)
         #define pull()  vm_pull(p)
 
         //read string pointer (just address conversion)
-        //!TODO redefine
         #define rsp(addr) vm_read_quad_string(addr)
          
          
@@ -282,7 +346,7 @@ void vm_run(vm_proc_t p)
     goto yield;
 
 die:
-    p->active = false;
+    vm_kill(id);
     
 yield:
     return;
@@ -294,13 +358,13 @@ bool vm_pass()
     bool exec = false;
 
     //execution pass
-    for (int i = 0; i < VM_N_PROC; i++)
+    for (vm_pid_t id = 0; id < VM_N_PROC; id++)
     {
-        vm_proc_t p = &vm_procs[i];
+        vm_proc_t p = vm_get_proc(id);
         if (!p->active) continue;
 
-        vm_run(p);
-        exec = true;
+        vm_run(id);
+        exec = true; // execution as taken place
     }
 
     //term update pass
