@@ -277,7 +277,7 @@ void vm_run(vm_pid_t id)
                 else
                 { 
                     p->counter--; 
-                    goto yield;
+                    //goto yield;
                 }
 
                 break;
@@ -304,7 +304,7 @@ void vm_run(vm_pid_t id)
                 } while (x != 0);
                 break;
 
-            case 0x20: khex32(pull()); goto yield;
+            case 0x20: khex32(pull()); break; //goto yield;
 
 
             //system instructions
