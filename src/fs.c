@@ -186,7 +186,7 @@ void fs_delete(fs_file_t f)
 
 void fs_collect()
 {
-    kdebug("fs_collect(): not implemented.\n\r");
+    kdebug(PSTR("fs_collect(): not implemented.\n\r"));
 }
 
 

@@ -1,3 +1,4 @@
+#include <avr/pgmspace.h>
 
 //4 concurrent programs
 #define VM_N_PROC 4
@@ -131,7 +132,7 @@ vm_proc_t vm_get_proc(vm_pid_t i)
 vm_pid_t vm_launch(fs_file_t f)
 {
     vm_pid_t i = vm_inactive(); 
-    if (i == VM_N_PROC) kpanic("Maximum process count reached.");
+    if (i == VM_N_PROC) kpanic(PSTR("Maximum process count reached."));
 
     vm_proc_t p = vm_get_proc(i);
     p->active  = true;
@@ -364,9 +365,9 @@ void vm_run(vm_pid_t id)
                 
 
             default:
-                kdebug("Unkown instruction!\n\r");
+                kdebug(PSTR("Unkown instruction!\n\r"));
                 khex8(inst);
-                kpanic("Crash\n\r");
+                kpanic(PSTR("Crash\n\r"));
         }
 
         #undef pull

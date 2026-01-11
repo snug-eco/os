@@ -2,6 +2,7 @@
 //terminal driver for uart 1.
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #include <util/delay.h>
 
 #define term_send_ready() (UCSR1A & (1<<UDRE1))
@@ -28,15 +29,15 @@ void term_clear()
         term_send('\n');
 }
 
-void term_print(char* str)
+void term_print(const char* str)
 {
     for (; *str; str++)
         term_send(*str);
 }
 
-void kprint(char* str)
+void kprint(const char* str)
 {
-    term_print("[KERNEL] ");
+    term_print(PSTR("[KERNEL] "));
     term_print(str);
 }
 
@@ -53,28 +54,28 @@ void term_init(unsigned int baud)
     UCSR1C = (1<<UCSZ11)|(1<<UCSZ10);
 
     term_clear();
-    kprint("[TERM] Terminal connection initialized.\n\r");
+    kprint(PSTR("[TERM] Terminal connection initialized.\n\r"));
 }
 
 
-void klog(char* str)
+void klog(const char* str)
 {
-    term_print("[DEBUG] ");
+    term_print(PSTR("[LOG] "));
     term_print(str);
 }
 
 
-void kdebug(char* str)
+void kdebug(const char* str)
 {
-    term_print("[DEBUG] ");
+    term_print(PSTR("[DEBUG] "));
     term_print(str);
 }
 
 
-static char khex_digit[16] = "0123456789ABCDEF";
+const char khex_digit[16] PROGMEM = "0123456789ABCDEF";
 void khex8(uint8_t byte)
 {
-    term_print("[HEX8] 0x");
+    term_print(PSTR("[HEX8] 0x"));
     for (int off = 8; off; off -= 4)
         term_send(khex_digit[(byte >> (off - 4)) & 0xF]);
     term_send('\n');
@@ -83,16 +84,16 @@ void khex8(uint8_t byte)
 
 void khex32(uint32_t word)
 {
-    term_print("[HEX32] 0x");
+    term_print(PSTR("[HEX32] 0x"));
     for (int off = 32; off; off -= 4)
         term_send(khex_digit[(word >> (off - 4)) & 0xF]);
     term_send('\n');
     term_send('\r');
 }
 
-void kpanic(char* str)
+void kpanic(const char* str)
 {
-    term_print("[PANIC] ");
+    term_print(PSTR("[PANIC] "));
     term_print(str);
 
     while (1) _delay_ms(1000);

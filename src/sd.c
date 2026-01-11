@@ -9,6 +9,7 @@
 // if changed even slightly, wreck user data.
 
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -26,8 +27,8 @@ typedef uint32_t sd_addr_t;
 #define SD_ACMD41 0x29
 #define SD_CMD58  0x3A
 
-#define sd_panic(msg) kpanic("[SD] " msg "\n\r\tTry power cycling the SD-Card and device.\n\r")
-#define sd_print(msg) kprint("[SD] " msg "\n\r")
+#define sd_panic(msg) kpanic(PSTR("[SD] " msg "\n\r\tTry power cycling the SD-Card and device.\n\r"))
+#define sd_print(msg) kprint(PSTR("[SD] " msg "\n\r"))
 
 
 void sd_spi_send(uint8_t data)
@@ -63,6 +64,7 @@ void SD_CS_OFF()
 
 void sd_spi_init(void)
 {
+    klog(PSTR("sd_spi_init: start\n\r"));
     //set io modes
     DDRD |=  (1 << PD0); //CS
 
