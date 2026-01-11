@@ -35,10 +35,17 @@ void term_print(const char* str)
         term_send(*str);
 }
 
+void term_print_prog(const char* pstr)
+{
+    char c;
+    while((c = pgm_read_byte(pstr++))) 
+        term_send(c);
+}
+
 void kprint(const char* str)
 {
-    term_print(PSTR("[KERNEL] "));
-    term_print(str);
+    term_print_prog(PSTR("[KERNEL] "));
+    term_print_prog(str);
 }
 
 void term_init(unsigned int baud)
@@ -58,24 +65,27 @@ void term_init(unsigned int baud)
 }
 
 
-void klog(const char* str)
+#define klog(s) _klog(PSTR(s "\n\r"))
+void _klog(const char* str)
 {
-    term_print(PSTR("[LOG] "));
-    term_print(str);
+    #ifdef KLOG
+        term_print_prog(PSTR("[LOG] "));
+        term_print_prog(str);
+    #endif
 }
 
 
 void kdebug(const char* str)
 {
-    term_print(PSTR("[DEBUG] "));
-    term_print(str);
+    term_print_prog(PSTR("[DEBUG] "));
+    term_print_prog(str);
 }
 
 
 const char khex_digit[16] PROGMEM = "0123456789ABCDEF";
 void khex8(uint8_t byte)
 {
-    term_print(PSTR("[HEX8] 0x"));
+    term_print_prog(PSTR("[HEX8] 0x"));
     for (int off = 8; off; off -= 4)
         term_send(khex_digit[(byte >> (off - 4)) & 0xF]);
     term_send('\n');
@@ -84,7 +94,7 @@ void khex8(uint8_t byte)
 
 void khex32(uint32_t word)
 {
-    term_print(PSTR("[HEX32] 0x"));
+    term_print_prog(PSTR("[HEX32] 0x"));
     for (int off = 32; off; off -= 4)
         term_send(khex_digit[(word >> (off - 4)) & 0xF]);
     term_send('\n');
@@ -93,8 +103,8 @@ void khex32(uint32_t word)
 
 void kpanic(const char* str)
 {
-    term_print(PSTR("[PANIC] "));
-    term_print(str);
+    term_print_prog(PSTR("[PANIC] "));
+    term_print_prog(str);
 
     while (1) _delay_ms(1000);
 }
