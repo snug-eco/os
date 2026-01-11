@@ -17,6 +17,30 @@
 #define BAUD_SCALAR 0 //0.5 Mbaud
 #define ROOT_BIN "bin.init" //launched on startup
 
+
+void boot(void)
+{
+    if (fs_exists(ROOT_BIN))
+    {
+        kprint("[TASK] Root binary '" ROOT_BIN "' found, launching...\n\r");
+        fs_file_t f = fs_seek(ROOT_BIN);
+        vm_launch(f);
+        kprint("[TASK] Root binary launched.\n\r");
+
+        kprint("[TASK] Bringing up task swapper. See you on the other side...\n\r");
+        while(vm_pass());
+
+        kprint("[TASK] Task swapper exited. System going into shutdown NOW.\n\r");
+        kprint("[TASK] Flushing disk caches...\n\r");
+        sd_flush();
+        kprint("[TASK] Synchronized.\n\r");
+
+    }
+    else
+        kprint("[TASK] No root binary '" ROOT_BIN "' found. Cannot boot, system stalled.\n\r");
+}
+
+
 int main(void)
 {
     //unset clock prescaler
@@ -25,30 +49,14 @@ int main(void)
 
     //terminal
     term_init(BAUD_SCALAR);
-    kprint("Terminal operating at 0.5 Mbaud.\n\r");
+    kprint("[TERM] Terminal operating at 0.5 Mbaud.\n\r");
 
     //sd card
     sd_init();
 
-    if (fs_exists(ROOT_BIN))
-    {
-        kprint("Root binary '" ROOT_BIN "' found, launching...\n\r");
-        fs_file_t f = fs_seek(ROOT_BIN);
-        vm_launch(f);
-        kprint("Root binary launched.\n\r");
+    //tha main thing
+    boot();
 
-        kprint("Bringing up task swapper. See you on the other side...\n\r");
-        while(vm_pass());
-
-        kprint("Task swapper exited. System going into shutdown NOW.\n\r");
-        kprint("Flushing disk caches...\n\r");
-        sd_flush();
-        kprint("Synchronized.\n\r");
-
-    }
-    else
-        kprint("No root binary '" ROOT_BIN "' found. Cannot boot, system stalled.\n\r");
-
-    kprint("System is down. Reset to reboot.\n\r");
+    kprint("[EXIT] System is down. Reset to reboot.\n\r");
     return 0;
 }
