@@ -17,20 +17,20 @@ struct vm_proc
     uint16_t counter;
     uint16_t size;
 
-    uint16_t return_stack[60];
+    uint16_t return_stack[64];
     uint8_t  return_index;
 
-    vint_t working_stack[120];
+    vint_t working_stack[128];
     uint8_t working_index;
 
-    vint_t var_store[120];
+    vint_t var_store[128];
 
     uint8_t cache[512];
     sd_addr_t cache_block;
     
 } vm_procs[VM_N_PROC] = { 0 };
 
-#define VM_HEAP_SIZE 1000
+#define VM_HEAP_SIZE 2000
 vint_t vm_heap[VM_HEAP_SIZE] = { 0 };
 
 //one-word header
