@@ -11,10 +11,10 @@
 #include "vm.c"
 
 //async normal speed -> f_osc / (16 * BAUD) + 1
-//   8MHz / (16 * 4800) - 1
-// = 500_000Hz / 4800 - 1
-//~= 104 - 1 = 103
-#define BAUD_SCALAR 103 //4800 baud
+//   8MHz / (16 * 500k) - 1
+// = 500_000Hz / 500_000 - 1
+//~= 1 - 1 = 0
+#define BAUD_SCALAR 0 //0.5 Mbaud
 
 
 int main(void)
