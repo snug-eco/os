@@ -53,16 +53,21 @@ void term_init(unsigned int baud)
     UCSR1C = (1<<UCSZ11)|(1<<UCSZ10);
 
     term_clear();
-    kprint("[TERM] Terminal UART 1 connection initialized.\n\r");
+    kprint("[TERM] Terminal connection initialized.\n\r");
+}
+
+
+void klog(char* str)
+{
+    term_print("[DEBUG] ");
+    term_print(str);
 }
 
 
 void kdebug(char* str)
 {
-    #ifdef KDEBUG
-        term_print("[DEBUG] ");
-        term_print(str);
-    #endif
+    term_print("[DEBUG] ");
+    term_print(str);
 }
 
 

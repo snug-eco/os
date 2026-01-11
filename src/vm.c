@@ -29,7 +29,7 @@ struct vm_proc
     
 } vm_procs[VM_N_PROC] = { 0 };
 
-#define VM_HEAP_SIZE 2000
+#define VM_HEAP_SIZE 1000
 vint_t vm_heap[VM_HEAP_SIZE] = { 0 };
 
 //one-word header
